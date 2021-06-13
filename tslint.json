@@ -1,0 +1,16 @@
+{
+  "extends": ["tslint:latest", "tslint-config-airbnb", "tslint-config-prettier", "tslint-immutable"],
+  "rules": {
+    "no-implicit-dependencies": [true, "dev"],
+    "no-var-keyword": true,
+    "no-parameter-reassignment": true,
+    "typedef": [true, "call-signature"],
+    "no-method-signature": true,
+    "no-mixed-interface": true,
+    "no-return-await": false,
+    "no-bitwise": false,
+    "object-shorthand-properties-first": false,
+    "import-name": false,
+    "prefer-template": [true, "allow-single-concat"]
+  }
+}

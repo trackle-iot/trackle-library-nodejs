@@ -1,0 +1,11 @@
+{
+    "releaseCommitMessageFormat": "chore(release): {{currentTag}} [skip ci]",
+    "types": [
+      {"type":"feat","section":"Features"},
+      {"type":"fix","section":"Bug Fixes"},
+      {"type":"test","section":"Tests"},
+      {"type":"build","section":"Build System"},
+      {"type":"docs","section":"Docs"},
+      {"type":"ci","hidden":true}
+    ]
+  }
