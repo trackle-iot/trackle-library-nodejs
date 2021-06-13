@@ -14,8 +14,6 @@ import CryptoManager from '../lib/CryptoManager';
 import CryptoStream from '../lib/CryptoStream';
 import CoapUriType from '../types/CoapUriType';
 
-import { VERSION } from '../version';
-
 const COUNTER_MAX = 65536;
 const EVENT_NAME_MAX_LENGTH = 64;
 const FUNCTIONS_MAX_NUMBER = 10;
@@ -58,6 +56,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKxmdyfKwLdHxffAr0ezRV9Z0Udec\n
 CeFwQ0pbwkDASWc0yKT4tPf7tNA/zK8fqi4ddoLPOhoLQjgUbVRCBdxNJw==\n
 -----END PUBLIC KEY-----\n
 \n`;
+
+const VERSION = process.env.npm_package_version;
 
 export interface ICloudOptions {
   address?: string;

@@ -12,8 +12,7 @@
   "keywords": [],
   "scripts": {
     "describe": "npm-scripts-info",
-    "version:output": "echo 'export const VERSION = \"'$npm_package_version.$(date +%s)'\"' > src/version.ts",
-    "build": "run-s clean && run-s version:output && run-p build:*",
+    "build": "run-s clean && run-p build:*",
     "build:main": "tsc -p tsconfig.json",
     "build:module": "tsc -p tsconfig.module.json",
     "fix": "run-s fix:*",
@@ -62,7 +61,7 @@
     "buffer-crc32": "^0.2.13",
     "coap-packet": "^0.1.14",
     "ec-key": "0.0.4",
-    "node-mbed-dtls-client": "git+https://github.com/durielz/node-mbed-dtls-client.git",
+    "node-mbed-dtls-client": "git+https://github.com/trackle-iot/node-mbed-dtls-client.git",
     "node-rsa": "^1.0.5"
   },
   "devDependencies": {
@@ -95,7 +94,7 @@
     "files": [
       "build/main/**/*.spec.js"
     ],
-    "sources": [
+    "ignoredByWatcher": [
       "build/main/**/*.js"
     ]
   },
