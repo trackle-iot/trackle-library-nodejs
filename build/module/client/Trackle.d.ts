@@ -45,12 +45,12 @@ declare class Trackle extends EventEmitter {
     private claimCode;
     constructor(cloudOptions?: ICloudOptions);
     forceTcpProtocol: () => boolean;
-    begin: (deviceID: string, privateKeyPEM: string, productID?: number, productFirmwareVersion?: number, platformID?: number) => Promise<void>;
+    begin: (deviceID: string, privateKey: string | Buffer, productID?: number, productFirmwareVersion?: number, platformID?: number) => Promise<void>;
     connect: () => Promise<void>;
     connected: () => boolean;
     setKeepalive: (keepalive: number) => void;
     setClaimCode: (claimCode: string) => void;
-    file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => void;
+    file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => boolean;
     post: (name: string, callFunctionCallback: (args: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
     get: (name: string, type: string, retrieveValueCallback: (varName: string) => any | Promise<any>) => boolean;
     disconnect: () => void;

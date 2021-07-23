@@ -19,16 +19,23 @@ class CryptoManager {
     }
   };
   public static loadPrivateKey = (
-    keyPEM: string,
+    key: string | Buffer,
     algorithm?: string
   ): ECKey | NodeRSA => {
     if (algorithm && algorithm === 'ecc') {
-      return new ECKey(keyPEM, 'pem');
+      return key.toString().startsWith('-----BEGIN')
+        ? new ECKey(key, 'pem').toBuffer('pkcs8')
+        : key;
     }
-    return new NodeRSA(keyPEM, 'pkcs1-private-pem', {
-      encryptionScheme: 'pkcs1',
-      signingScheme: 'pkcs1'
-    });
+    return key.toString().startsWith('-----BEGIN')
+      ? new NodeRSA(key, 'pkcs1-private-pem', {
+          encryptionScheme: 'pkcs1',
+          signingScheme: 'pkcs1'
+        })
+      : new NodeRSA(key, 'pkcs1-private-der', {
+          encryptionScheme: 'pkcs1',
+          signingScheme: 'pkcs1'
+        });
   };
 
   public static randomBytes = (count: number): Buffer =>

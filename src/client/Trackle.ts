@@ -16,9 +16,10 @@ import CoapUriType from '../types/CoapUriType';
 
 const COUNTER_MAX = 65536;
 const EVENT_NAME_MAX_LENGTH = 64;
+const FILES_MAX_NUMBER = 4;
 const FUNCTIONS_MAX_NUMBER = 10;
 const VARIABLES_MAX_NUMBER = 10;
-const SUBSCRIPTIONS_MAX_NUMBER = 10;
+const SUBSCRIPTIONS_MAX_NUMBER = 4;
 
 const PRODUCT_FIRMWARE_VERSION = 1;
 const SOCKET_TIMEOUT = 31000;
@@ -160,7 +161,7 @@ class Trackle extends EventEmitter {
 
   public begin = async (
     deviceID: string,
-    privateKeyPEM: string,
+    privateKey: string | Buffer,
     productID?: number,
     productFirmwareVersion?: number,
     platformID?: number
@@ -173,11 +174,11 @@ class Trackle extends EventEmitter {
     }
     this.deviceID = Buffer.from(deviceID, 'hex');
 
-    if (privateKeyPEM === '') {
-      throw new Error(`You must define privateKeyPEM`);
+    if (!privateKey) {
+      throw new Error(`You must define privateKey in PEM string or DER Buffer`);
     }
     this.privateKey = CryptoManager.loadPrivateKey(
-      privateKeyPEM,
+      privateKey,
       this.forceTcp ? 'rsa' : 'ecc'
     );
 
@@ -251,7 +252,7 @@ class Trackle extends EventEmitter {
               parseInt(process.env.DEBUG_MBED, 10) > 0) ||
             undefined,
           host: this.host,
-          key: this.privateKey.toBuffer('pkcs8'),
+          key: this.privateKey,
           peerPublicKey: this.serverKey.toBuffer('spki'),
           port: this.port
         },
@@ -317,8 +318,15 @@ class Trackle extends EventEmitter {
     fileName: string,
     mimeType: string,
     retrieveFileCallback: (fileName: string) => Promise<Buffer>
-  ) => {
+  ): boolean => {
+    if (fileName.length > EVENT_NAME_MAX_LENGTH) {
+      return false;
+    }
+    if (this.filesMap.size >= FILES_MAX_NUMBER) {
+      return false;
+    }
     this.filesMap.set(fileName, [mimeType, retrieveFileCallback]);
+    return true;
   };
 
   public post = (
@@ -340,7 +348,7 @@ class Trackle extends EventEmitter {
     name: string,
     type: string,
     retrieveValueCallback: (varName: string) => any | Promise<any>
-  ) => {
+  ): boolean => {
     if (name.length > EVENT_NAME_MAX_LENGTH) {
       return false;
     }
@@ -815,9 +823,12 @@ class Trackle extends EventEmitter {
       this.sendPingAck(packet);
     }
 
-    if (packet.code === '2.05' && packet.ack) {
-      // get time response
-      this.emit('time', parseInt(packet.payload.toString('hex'), 16));
+    if (packet.code === '4.00' && packet.ack) {
+      this.emit('error', new Error(packet.payload.toString('utf8')));
+    }
+
+    if (packet.code === '5.00' && packet.ack) {
+      this.emit('error', new Error('server error'));
     }
 
     const uriOption = packet.options.find(option => option.name === 'Uri-Path');
@@ -829,6 +840,11 @@ class Trackle extends EventEmitter {
       coapPath.substring(0, coapPath.indexOf('/')) || coapPath;
 
     switch (messageType) {
+      case CoapUriType.GetTime: {
+        this.emit('time', parseInt(packet.payload.toString('hex'), 16));
+        break;
+      }
+
       case CoapUriType.Describe: {
         const uriQuery = packet.options.find(
           option => option.name === 'Uri-Query'
@@ -909,7 +925,7 @@ class Trackle extends EventEmitter {
         const uris = packet.options
           .filter(o => o.name === 'Uri-Path')
           .map(o => o.value.toString('utf8'));
-        uris.shift(); // Remove v
+        uris.shift(); // Remove g
         const fileName = uris.join('/');
         this.sendFile(fileName, packet);
         break;
@@ -1255,7 +1271,7 @@ class Trackle extends EventEmitter {
         if (fileBuffer) {
           this.messageID -= 1;
         }
-        this.writeError(serverPacket, err.message, err.status || '4.00');
+        this.writeError(serverPacket, err.message, err.status || '5.00');
         this.emit('error', new Error(err.message));
       }
 
@@ -1504,7 +1520,7 @@ class Trackle extends EventEmitter {
         if (returnValue) {
           this.messageID -= 1;
         }
-        this.writeError(serverPacket, err.message, err.status || '4.00');
+        this.writeError(serverPacket, err.message, err.status || '5.00');
         this.emit('error', new Error(err.message));
       }
     } else {
@@ -1541,7 +1557,7 @@ class Trackle extends EventEmitter {
           this.writeError(
             serverPacket,
             'Value max length is 622 bytes',
-            '4.00'
+            '5.00'
           );
           this.emit('error', new Error('Value max length is 622 bytes'));
           return;
@@ -1557,7 +1573,7 @@ class Trackle extends EventEmitter {
         if (variableValue) {
           this.messageID -= 1;
         }
-        this.writeError(serverPacket, err.message, err.status || '4.00');
+        this.writeError(serverPacket, err.message, err.status || '5.00');
         this.emit('error', new Error(err.message));
       }
     } else {
