@@ -60,6 +60,8 @@ CeFwQ0pbwkDASWc0yKT4tPf7tNA/zK8fqi4ddoLPOhoLQjgUbVRCBdxNJw==\n
 
 const VERSION = process.env.npm_package_version;
 
+const SYSTEM_EVENT_NAMES = ['iotready', 'trackle'];
+
 export interface ICloudOptions {
   address?: string;
   publicKeyPEM?: string;
@@ -563,7 +565,9 @@ class Trackle extends EventEmitter {
     this.writeCoapData(packet);
     try {
       await this.listenFor('ACK', null, messageID, SEND_EVENT_ACK_TIMEOUT);
-      this.emit('subscribe', eventName);
+      if (!SYSTEM_EVENT_NAMES.includes(eventName)) {
+        this.emit('subscribe', eventName);
+      }
     } catch (err) {
       this.emit('error', new Error('Subscribe: ' + err.message));
     }
@@ -969,11 +973,11 @@ class Trackle extends EventEmitter {
 
   private sendHello = (wasOtaUpgradeSuccessful?: boolean) => {
     const HELLO_FLAG_OTA_UPGRADE_SUCCESSFUL = 1;
-    const HELLO_FLAG_DIAGNOSTICS_SUPPORT = 2;
+    // const HELLO_FLAG_DIAGNOSTICS_SUPPORT = 2;
     const HELLO_FLAG_IMMEDIATE_UPDATES_SUPPORT = 4;
 
     let flags = wasOtaUpgradeSuccessful ? HELLO_FLAG_OTA_UPGRADE_SUCCESSFUL : 0;
-    flags |= HELLO_FLAG_DIAGNOSTICS_SUPPORT;
+    // flags |= HELLO_FLAG_DIAGNOSTICS_SUPPORT;
     flags |= HELLO_FLAG_IMMEDIATE_UPDATES_SUPPORT;
 
     const data = [
