@@ -31,7 +31,7 @@ const DESCRIBE_ALL = DESCRIBE_APPLICATION | DESCRIBE_SYSTEM;
 
 const CHUNK_SIZE = 256;
 
-const SEND_EVENT_ACK_TIMEOUT = 20000;
+const SEND_EVENT_ACK_TIMEOUT = 5000;
 
 type DeviceState = 'next' | 'nonce' | 'set-session-key';
 type EventType = 'PRIVATE' | 'PUBLIC';
@@ -88,6 +88,8 @@ const getPlatformID = (): number => {
 const delay = async (ms: number): Promise<void> =>
   await new Promise(resolve => setTimeout(resolve, ms));
 
+EventEmitter.defaultMaxListeners = 100;
+
 class Trackle extends EventEmitter {
   public cloud: ICloudOptions;
 
@@ -125,7 +127,7 @@ class Trackle extends EventEmitter {
   >;
   private subscriptionsMap: Map<
     string,
-    [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType]
+    [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType, string]
   >;
   private variablesMap: Map<
     string,
@@ -149,7 +151,7 @@ class Trackle extends EventEmitter {
     >();
     this.subscriptionsMap = new Map<
       string,
-      [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType]
+      [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType, string]
     >();
     this.variablesMap = new Map<
       string,
@@ -370,12 +372,16 @@ class Trackle extends EventEmitter {
   public subscribe = (
     eventName: string,
     callback: (event: string, data: string) => void,
-    subscriptionType?: SubscriptionType
+    subscriptionType?: SubscriptionType,
+    subscriptionDeviceID?: string
   ): boolean => {
     if (eventName.length > EVENT_NAME_MAX_LENGTH) {
       return false;
     }
     if (this.subscriptionsMap.size >= SUBSCRIPTIONS_MAX_NUMBER) {
+      return false;
+    }
+    if (subscriptionDeviceID && subscriptionDeviceID.length !== 24) {
       return false;
     }
     const handler = (packet: CoapPacket.ParsedPacket) => {
@@ -391,7 +397,7 @@ class Trackle extends EventEmitter {
     if (subscriptionType && subscriptionType === 'MY_DEVICES') {
       type = 'MY_DEVICES';
     }
-    this.subscriptionsMap.set(eventName, [handler, type]);
+    this.subscriptionsMap.set(eventName, [handler, type, subscriptionDeviceID]);
     return true;
   };
 
@@ -535,7 +541,8 @@ class Trackle extends EventEmitter {
   private sendSubscribe = async (
     eventName: string,
     handler: (packet: CoapPacket.ParsedPacket) => void,
-    subscriptionType: SubscriptionType
+    subscriptionType: SubscriptionType,
+    subscriptionDeviceID?: string
   ) => {
     if (!this.isConnected) {
       return;
@@ -559,7 +566,11 @@ class Trackle extends EventEmitter {
       code: 'GET',
       confirmable: true,
       messageId: messageID,
-      options
+      options,
+      payload:
+        subscriptionType === 'MY_DEVICES' && subscriptionDeviceID
+          ? Buffer.from(subscriptionDeviceID, 'hex')
+          : undefined
     };
 
     this.writeCoapData(packet);
@@ -593,7 +604,11 @@ class Trackle extends EventEmitter {
 
     this.subscriptionsMap.forEach(
       (
-        value: [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType],
+        value: [
+          (packet: CoapPacket.ParsedPacket) => void,
+          SubscriptionType,
+          string
+        ],
         eventName: string
       ) => {
         this.removeListener(eventName, value[0]);
@@ -735,7 +750,7 @@ class Trackle extends EventEmitter {
 
     for await (const sub of this.subscriptionsMap.entries()) {
       await delay(50);
-      this.sendSubscribe(sub[0], sub[1][0], sub[1][1]);
+      this.sendSubscribe(sub[0], sub[1][0], sub[1][1], sub[1][2]);
     }
 
     // send getTime
@@ -824,6 +839,7 @@ class Trackle extends EventEmitter {
     }
 
     if (packet.code === '0.00' && packet.confirmable) {
+      this.emit('ping');
       this.sendPingAck(packet);
     }
 

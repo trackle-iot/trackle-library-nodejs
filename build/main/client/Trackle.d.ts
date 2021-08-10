@@ -54,7 +54,7 @@ declare class Trackle extends EventEmitter {
     post: (name: string, callFunctionCallback: (args: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
     get: (name: string, type: string, retrieveValueCallback: (varName: string) => any | Promise<any>) => boolean;
     disconnect: () => void;
-    subscribe: (eventName: string, callback: (event: string, data: string) => void, subscriptionType?: SubscriptionType) => boolean;
+    subscribe: (eventName: string, callback: (event: string, data: string) => void, subscriptionType?: SubscriptionType, subscriptionDeviceID?: string) => boolean;
     unsubscribe: (eventName: string) => void;
     publish: (eventName: string, data?: string, eventType?: EventType, eventFlags?: EventFlags, messageID?: string) => Promise<void>;
     enableUpdates: () => void;
