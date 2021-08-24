@@ -27,6 +27,7 @@ declare class Trackle extends EventEmitter {
     private messageID;
     private owners;
     private pingInterval;
+    private dumbPingInterval;
     private platformID;
     private productFirmwareVersion;
     private productID;
@@ -41,6 +42,7 @@ declare class Trackle extends EventEmitter {
     private variablesMap;
     private sentPacketCounterMap;
     private wasOtaUpgradeSuccessful;
+    private dumbKeepalive;
     private keepalive;
     private claimCode;
     constructor(cloudOptions?: ICloudOptions);
@@ -48,7 +50,6 @@ declare class Trackle extends EventEmitter {
     begin: (deviceID: string, privateKey: string | Buffer, productID?: number, productFirmwareVersion?: number, platformID?: number) => Promise<void>;
     connect: () => Promise<void>;
     connected: () => boolean;
-    setKeepalive: (keepalive: number) => void;
     setClaimCode: (claimCode: string) => void;
     file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => boolean;
     post: (name: string, callFunctionCallback: (args: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
@@ -83,6 +84,7 @@ declare class Trackle extends EventEmitter {
     private validateFirmwareFile;
     private sendFile;
     private listenFor;
+    private dumbPingServer;
     private pingServer;
     private writeError;
     private sendFunctionResult;
