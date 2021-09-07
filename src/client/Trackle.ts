@@ -109,7 +109,6 @@ class Trackle extends EventEmitter {
   private messageID: number = 0;
   private owners: string[];
   private pingInterval: number;
-  private dumbPingInterval: number;
   private platformID: number;
   private productFirmwareVersion: number;
   private productID: number;
@@ -136,8 +135,7 @@ class Trackle extends EventEmitter {
   >;
   private sentPacketCounterMap: Map<number, number>;
   private wasOtaUpgradeSuccessful: boolean = false; // not used
-  private dumbKeepalive: number = this.forceTcp ? 15000 : 30000;
-  private keepalive: number = 601000;
+  private keepalive: number = this.forceTcp ? 15000 : 30000;
   private claimCode: string;
 
   constructor(cloudOptions: ICloudOptions = {}) {
@@ -613,10 +611,6 @@ class Trackle extends EventEmitter {
       }
     );
 
-    if (this.dumbPingInterval) {
-      clearInterval(this.dumbPingInterval as any);
-      this.dumbPingInterval = null;
-    }
     if (this.pingInterval) {
       clearInterval(this.pingInterval as any);
       this.pingInterval = null;
@@ -740,12 +734,7 @@ class Trackle extends EventEmitter {
 
     this.state = 'next';
 
-    // Dumb ping every 15 or 30 seconds
-    this.dumbPingInterval = setInterval(
-      () => this.dumbPingServer(),
-      this.dumbKeepalive
-    ) as any;
-    // Coap ping every 10 minutes
+    // Ping every 15 or 30 seconds
     this.pingInterval = setInterval(
       () => this.pingServer(),
       this.keepalive
@@ -1431,7 +1420,7 @@ class Trackle extends EventEmitter {
         const timeout = setTimeout(() => {
           cleanUpListeners();
           reject(new Error(`Request timed out ${eventName}`));
-        }, timeoutMs || this.dumbKeepalive * 2);
+        }, timeoutMs || this.keepalive * 2);
 
         // adds a one time event
         const handler = (packet: CoapPacket.ParsedPacket) => {
@@ -1470,16 +1459,13 @@ class Trackle extends EventEmitter {
     );
   };
 
-  private dumbPingServer = () => {
+  private pingServer = () => {
     if (!this.isConnected) {
       return;
     }
 
-    this.socket.dumbPing();
-  };
-
-  private pingServer = () => {
-    if (!this.isConnected) {
+    if (!this.forceTcp) {
+      this.socket.dumbPing();
       return;
     }
 
