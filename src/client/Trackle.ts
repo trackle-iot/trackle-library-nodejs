@@ -592,8 +592,8 @@ class Trackle extends EventEmitter {
       this.decipherStream.removeAllListeners();
     }
 
-    this.socket.removeAllListeners();
     if (this.socket) {
+      this.socket.removeAllListeners();
       this.socket.destroy();
       this.socket = null;
     }
