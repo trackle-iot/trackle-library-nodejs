@@ -58,7 +58,7 @@ CeFwQ0pbwkDASWc0yKT4tPf7tNA/zK8fqi4ddoLPOhoLQjgUbVRCBdxNJw==\n
 -----END PUBLIC KEY-----\n
 \n`;
 
-const VERSION = process.env.npm_package_version;
+const VERSION = '1.1.2';
 
 const SYSTEM_EVENT_NAMES = ['iotready', 'trackle'];
 
