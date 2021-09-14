@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.2](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.1.1...v1.1.2) (2021-09-14)
+
+
+### Bug Fixes
+
+* check socket exists before remove listeners ([19a4dd1](https://github.com/trackle-iot/trackle-library-nodejs/commit/19a4dd106b829a5b9e8aea7b01fc107e8c6c4b90))
+* default firmware version is 0 ([9f749a7](https://github.com/trackle-iot/trackle-library-nodejs/commit/9f749a702a2fa693a94d0b0a0bcc0f5f7f4a7312))
+* remove dumbPingInterval fucntion ([2fe4875](https://github.com/trackle-iot/trackle-library-nodejs/commit/2fe48759a364d5daddcb68b40d9f10e9c00201d9))
+* specify version manually ([e8ed6b9](https://github.com/trackle-iot/trackle-library-nodejs/commit/e8ed6b94885f83b13f58e398987da44a7379f858))
+
 ### [1.1.1](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.1.0...v1.1.1) (2021-08-24)
 
 
