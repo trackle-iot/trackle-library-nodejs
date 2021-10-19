@@ -3,10 +3,13 @@ import CoapPacket from 'coap-packet';
 import dns from 'dns';
 import ECKey from 'ec-key';
 import { EventEmitter } from 'events';
+import http from 'http';
+import https from 'https';
 import { Socket } from 'net';
 import dtls from 'node-mbed-dtls-client';
 import NodeRSA from 'node-rsa';
 import os from 'os';
+import { URL } from 'url';
 
 import ChunkingStream from '../lib/ChunkingStream';
 import CoapMessages from '../lib/CoapMessages';
@@ -29,7 +32,7 @@ const DESCRIBE_APPLICATION = 1 << 1;
 const DESCRIBE_SYSTEM = 1 << 0;
 const DESCRIBE_ALL = DESCRIBE_APPLICATION | DESCRIBE_SYSTEM;
 
-const CHUNK_SIZE = 256;
+const CHUNK_SIZE = 512;
 
 const SEND_EVENT_ACK_TIMEOUT = 5000;
 
@@ -135,7 +138,7 @@ class Trackle extends EventEmitter {
   >;
   private sentPacketCounterMap: Map<number, number>;
   private wasOtaUpgradeSuccessful: boolean = false; // not used
-  private keepalive: number = this.forceTcp ? 15000 : 30000;
+  private keepalive: number = 30000;
   private claimCode: string;
 
   constructor(cloudOptions: ICloudOptions = {}) {
@@ -161,7 +164,10 @@ class Trackle extends EventEmitter {
     this.cloud = cloudOptions;
   }
 
-  public forceTcpProtocol = () => (this.forceTcp = true);
+  public forceTcpProtocol = () => {
+    this.forceTcp = true;
+    this.keepalive = 15000;
+  };
 
   public begin = async (
     deviceID: string,
@@ -764,6 +770,13 @@ class Trackle extends EventEmitter {
     }
 
     await delay(50);
+    this.publish(
+      'trackle/hardware/ota_chunk_size',
+      CHUNK_SIZE.toString(),
+      'PRIVATE'
+    );
+
+    await delay(50);
     if (this.otaUpdateEnabled) {
       this.publish('trackle/device/updates/enabled', 'true', 'PRIVATE');
     } else {
@@ -820,6 +833,41 @@ class Trackle extends EventEmitter {
         break;
       case 'trackle/device/owners':
         this.owners = data.split(',');
+        break;
+      case 'trackle/device/update':
+        try {
+          const { crc, url } = JSON.parse(data);
+          const fileURL = new URL(url);
+          const protocol = fileURL.protocol === 'https:' ? https : http;
+          const fileBuffer: Buffer = await new Promise((resolve, reject) => {
+            protocol
+              .get(url, res => {
+                const fileData = [];
+                res
+                  .on('data', chunk => {
+                    fileData.push(chunk);
+                  })
+                  .on('end', () => {
+                    const bufferInt = Buffer.concat(fileData);
+                    resolve(bufferInt);
+                  });
+              })
+              .on('error', err => {
+                reject(err);
+              });
+          });
+          // check if the firmware is the one defined in Cloud
+          if (crc && crc32(fileBuffer).toString('hex') !== crc) {
+            throw new Error('Firmware validation failed: crc not valid');
+          }
+          this.emit('otaReceived', {
+            fileContentBuffer: fileBuffer,
+            fileSize: fileBuffer.length
+          });
+        } catch (err) {
+          this.publish('trackle/device/ota_result', err.message, 'PRIVATE');
+          this.emit('error', err);
+        }
         break;
     }
   };
@@ -1148,7 +1196,8 @@ class Trackle extends EventEmitter {
               fileSize
             });
           } else {
-            // check if is a valid firmware file
+            this.emit('otaFinished');
+            // check if is a valid OTA firmware file
             try {
               const fileBuffer = this.validateFirmwareFile(fileContentBuffer);
               this.emit('otaReceived', {
@@ -1156,6 +1205,7 @@ class Trackle extends EventEmitter {
                 fileSize
               });
             } catch (err) {
+              this.publish('trackle/device/ota_result', err.message, 'PRIVATE');
               this.emit('error', err);
             }
           }
@@ -1173,6 +1223,7 @@ class Trackle extends EventEmitter {
         token: packet.token
       };
       this.writeCoapData(responsePacket);
+      this.emit('otaStarted');
       /******************************/
 
       // 4- wait for UpdateDone packet

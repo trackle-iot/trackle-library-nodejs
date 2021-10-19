@@ -44,7 +44,7 @@ declare class Trackle extends EventEmitter {
     private keepalive;
     private claimCode;
     constructor(cloudOptions?: ICloudOptions);
-    forceTcpProtocol: () => boolean;
+    forceTcpProtocol: () => void;
     begin: (deviceID: string, privateKey: string | Buffer, productID?: number, productFirmwareVersion?: number, platformID?: number) => Promise<void>;
     connect: () => Promise<void>;
     connected: () => boolean;
