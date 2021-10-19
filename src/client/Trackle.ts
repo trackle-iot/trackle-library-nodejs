@@ -39,7 +39,7 @@ type EventFlags = 'WITH_ACK' | 'NO_ACK';
 type FunctionFlags = 'OWNER_ONLY';
 type SubscriptionType = 'ALL_DEVICES' | 'MY_DEVICES';
 
-const CLOUD_ADDRESS_TCP = 'device.iotready.it';
+const CLOUD_ADDRESS_TCP = 'device.trackle.io';
 const CLOUD_PUBLIC_KEY_TCP = `-----BEGIN PUBLIC KEY-----\n
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7hEN7ub/klSKC6qBpFmT\n
 /qZKQqdu4pS+2Y9/w7xb5BxQ7Ss+e8vKhRKvP1F2VdRy2UFym0qwBIKRQ3ha3Nbs\n
@@ -51,14 +51,14 @@ NwIDAQAB\n
 -----END PUBLIC KEY-----\n
 \n`;
 
-const CLOUD_ADDRESS_UDP = 'udp.device.iotready.it';
+const CLOUD_ADDRESS_UDP = 'udp.device.trackle.io';
 const CLOUD_PUBLIC_KEY_UDP = `-----BEGIN PUBLIC KEY-----\n
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKxmdyfKwLdHxffAr0ezRV9Z0Udec\n
 CeFwQ0pbwkDASWc0yKT4tPf7tNA/zK8fqi4ddoLPOhoLQjgUbVRCBdxNJw==\n
 -----END PUBLIC KEY-----\n
 \n`;
 
-const VERSION = '1.1.2';
+const VERSION = '1.2.0';
 
 const SYSTEM_EVENT_NAMES = ['iotready', 'trackle'];
 
@@ -460,7 +460,7 @@ class Trackle extends EventEmitter {
     if (!this.otaUpdateEnabled) {
       this.otaUpdateEnabled = true;
       if (this.isConnected) {
-        this.publish('iotready/device/updates/enabled', 'true', 'PRIVATE');
+        this.publish('trackle/device/updates/enabled', 'true', 'PRIVATE');
       }
     }
   };
@@ -469,7 +469,7 @@ class Trackle extends EventEmitter {
     if (this.otaUpdateEnabled) {
       this.otaUpdateEnabled = false;
       if (this.isConnected) {
-        this.publish('iotready/device/updates/enabled', 'false', 'PRIVATE');
+        this.publish('trackle/device/updates/enabled', 'false', 'PRIVATE');
       }
     }
   };
@@ -742,7 +742,7 @@ class Trackle extends EventEmitter {
     this.isConnected = true;
     this.emit('connected');
 
-    this.subscribe('iotready', this.handleSystemEvent);
+    this.subscribe('trackle', this.handleSystemEvent);
 
     for await (const sub of this.subscriptionsMap.entries()) {
       await delay(50);
@@ -760,20 +760,20 @@ class Trackle extends EventEmitter {
       this.claimCode.length < 70
     ) {
       await delay(50);
-      this.publish('iotready/device/claim/code', this.claimCode, 'PRIVATE');
+      this.publish('trackle/device/claim/code', this.claimCode, 'PRIVATE');
     }
 
     await delay(50);
     if (this.otaUpdateEnabled) {
-      this.publish('iotready/device/updates/enabled', 'true', 'PRIVATE');
+      this.publish('trackle/device/updates/enabled', 'true', 'PRIVATE');
     } else {
-      this.publish('iotready/device/updates/enabled', 'false', 'PRIVATE');
+      this.publish('trackle/device/updates/enabled', 'false', 'PRIVATE');
     }
     await delay(50);
     if (this.otaUpdateForced) {
-      this.publish('iotready/device/updates/forced', 'true', 'PRIVATE');
+      this.publish('trackle/device/updates/forced', 'true', 'PRIVATE');
     } else {
-      this.publish('iotready/device/updates/forced', 'false', 'PRIVATE');
+      this.publish('trackle/device/updates/forced', 'false', 'PRIVATE');
     }
   };
 
@@ -782,7 +782,7 @@ class Trackle extends EventEmitter {
     data: string
   ): Promise<void> => {
     switch (eventName) {
-      case 'iotready/device/reset':
+      case 'trackle/device/reset':
         switch (data) {
           case 'dfu':
             this.emit('dfu');
@@ -795,30 +795,30 @@ class Trackle extends EventEmitter {
             break;
         }
         break;
-      case 'iotready/device/updates/forced':
+      case 'trackle/device/updates/forced':
         const newUpdateForcedData = data === 'true';
         if (this.otaUpdateForced !== newUpdateForcedData) {
           this.otaUpdateForced = newUpdateForcedData;
           this.emit('firmwareUpdateForced', newUpdateForcedData);
           this.publish(
-            'iotready/device/updates/forced',
+            'trackle/device/updates/forced',
             newUpdateForcedData.toString(),
             'PRIVATE'
           );
         }
         break;
-      case 'iotready/device/updates/pending':
+      case 'trackle/device/updates/pending':
         const newUpdatePendingData = data === 'true';
         if (this.otaUpdatePending !== newUpdatePendingData) {
           this.otaUpdatePending = newUpdatePendingData;
           if (newUpdatePendingData) {
             // true
             this.emit('firmwareUpdatePending');
-            this.publish('iotready/device/updates/pending', '', 'PRIVATE');
+            this.publish('trackle/device/updates/pending', '', 'PRIVATE');
           }
         }
         break;
-      case 'iotready/device/owners':
+      case 'trackle/device/owners':
         this.owners = data.split(',');
         break;
     }

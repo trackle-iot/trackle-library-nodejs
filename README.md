@@ -10,7 +10,7 @@
 ````
 
 
-[![GitHub version](https://img.shields.io/badge/version-v1.0.0-blue)](https://github.com/trackle-iot/trackle-nodejs-library/releases/latest) &nbsp; &nbsp;
+[![GitHub version](https://img.shields.io/badge/version-v1.2.0-blue)](https://github.com/trackle-iot/trackle-nodejs-library/releases/latest) &nbsp; &nbsp;
 [![GitHub stars](https://img.shields.io/github/stars/trackle-iot/trackle-nodejs-library?style=social)](https://github.com/trackle-iot/trackle-nodejs-library/stargazers) 
 __________
 
@@ -29,7 +29,7 @@ Trackle library for Node.js runs on any hardware supporting Node.js with Linux b
 **Trackle [Library for NodeJS](https://github.com/trackle-iot/trackle-nodejs-library/releases/latest)**
 
 ### Quickstart: Get a Device ID and a private key
-* Create an account on Trackle Cloud (https://platform.iotready.it/)
+* Create an account on Trackle Cloud (https://trackle.cloud)
 * Open "My Devices" section from the drawer
 * Click the button "Claim a device"
 * Select the link "I don't have a device id", then Continue
