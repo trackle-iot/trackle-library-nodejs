@@ -40,7 +40,6 @@ declare class Trackle extends EventEmitter {
     private subscriptionsMap;
     private variablesMap;
     private sentPacketCounterMap;
-    private wasOtaUpgradeSuccessful;
     private keepalive;
     private claimCode;
     constructor(cloudOptions?: ICloudOptions);

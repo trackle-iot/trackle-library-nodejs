@@ -137,7 +137,6 @@ class Trackle extends EventEmitter {
     [string, (varName: string) => any | Promise<any>]
   >;
   private sentPacketCounterMap: Map<number, number>;
-  private wasOtaUpgradeSuccessful: boolean = false; // not used
   private keepalive: number = 30000;
   private claimCode: string;
 
@@ -728,7 +727,7 @@ class Trackle extends EventEmitter {
   };
 
   private finalizeHandshake = async () => {
-    this.sendHello(this.wasOtaUpgradeSuccessful);
+    this.sendHello();
 
     if (this.forceTcp) {
       this.helloTimeout = setTimeout(
@@ -765,24 +764,24 @@ class Trackle extends EventEmitter {
       this.claimCode.length > 0 &&
       this.claimCode.length < 70
     ) {
-      await delay(50);
+      await delay(25);
       this.publish('trackle/device/claim/code', this.claimCode, 'PRIVATE');
     }
 
-    await delay(50);
+    await delay(25);
     this.publish(
       'trackle/hardware/ota_chunk_size',
       CHUNK_SIZE.toString(),
       'PRIVATE'
     );
 
-    await delay(50);
+    await delay(25);
     if (this.otaUpdateEnabled) {
       this.publish('trackle/device/updates/enabled', 'true', 'PRIVATE');
     } else {
       this.publish('trackle/device/updates/enabled', 'false', 'PRIVATE');
     }
-    await delay(50);
+    await delay(25);
     if (this.otaUpdateForced) {
       this.publish('trackle/device/updates/forced', 'true', 'PRIVATE');
     } else {
@@ -1031,22 +1030,14 @@ class Trackle extends EventEmitter {
     return this.messageID;
   };
 
-  private sendHello = (wasOtaUpgradeSuccessful?: boolean) => {
-    const HELLO_FLAG_OTA_UPGRADE_SUCCESSFUL = 1;
-    // const HELLO_FLAG_DIAGNOSTICS_SUPPORT = 2;
-    const HELLO_FLAG_IMMEDIATE_UPDATES_SUPPORT = 4;
-
-    let flags = wasOtaUpgradeSuccessful ? HELLO_FLAG_OTA_UPGRADE_SUCCESSFUL : 0;
-    // flags |= HELLO_FLAG_DIAGNOSTICS_SUPPORT;
-    flags |= HELLO_FLAG_IMMEDIATE_UPDATES_SUPPORT;
-
+  private sendHello = () => {
     const data = [
       this.productID >> 8,
       this.productID & 0xff,
       this.productFirmwareVersion >> 8,
       this.productFirmwareVersion & 0xff,
       0, // Reserved flag
-      flags, // Flags -- newly upgraded. We probably won't use this
+      0, // Flags
       this.platformID >> 8,
       this.platformID & 0xff,
       this.deviceID.length >> 8,
