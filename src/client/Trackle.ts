@@ -834,6 +834,15 @@ class Trackle extends EventEmitter {
         this.owners = data.split(',');
         break;
       case 'trackle/device/update':
+        if (!this.otaUpdateEnabled && !this.otaUpdateForced) {
+          this.publish(
+            'trackle/device/ota_result',
+            'Updates are not enabled',
+            'PRIVATE'
+          );
+          this.emit('error', new Error('Updates are not enabled'));
+          return;
+        }
         try {
           const { crc, url } = JSON.parse(data);
           const fileURL = new URL(url);
@@ -855,11 +864,16 @@ class Trackle extends EventEmitter {
                 reject(err);
               });
           });
+          const filename = url.substring(url.lastIndexOf('/') + 1);
+          // check if the firmware is the one defined in Cloud
+          if (!filename || !filename.endsWith('.bin')) {
+            throw new Error('Firmware validation failed: not a bin file');
+          }
           // check if the firmware is the one defined in Cloud
           if (crc && crc32(fileBuffer).toString('hex') !== crc) {
             throw new Error('Firmware validation failed: crc not valid');
           }
-          this.emit('otaReceived', {
+          this.emit('otaRequest', {
             fileContentBuffer: fileBuffer,
             fileSize: fileBuffer.length
           });
@@ -1130,7 +1144,7 @@ class Trackle extends EventEmitter {
     const fileName = packet.payload.toString('utf8', 13, 13 + fileNameLength);
     /******************************/
 
-    if (
+    /* if (
       packet.payload.length === 12 &&
       !this.otaUpdateEnabled &&
       !this.otaUpdateForced
@@ -1145,9 +1159,9 @@ class Trackle extends EventEmitter {
       this.writeCoapData(ackPacket);
       this.emit('error', new Error(`Updates are not enabled`));
       return;
-    }
+    } */
 
-    if (packet.payload.length === 12 || this.filesMap.has(fileName)) {
+    if (/* packet.payload.length === 12 ||*/ this.filesMap.has(fileName)) {
       // 2- listen Chunk packet and fill fileContentBuffer
       const fileContentBuffer = Buffer.allocUnsafe(fileSize);
       const chunksNumber = Math.floor((fileSize + chunksSize - 1) / chunksSize);
@@ -1180,18 +1194,18 @@ class Trackle extends EventEmitter {
         if (chunksNumber === chunksCounter) {
           this.removeListener('Chunk', chunkHandler);
 
-          if (fileName && this.filesMap.has(fileName)) {
-            this.emit('fileReceived', {
-              fileContentBuffer,
-              fileName,
-              fileSize
-            });
-          } else {
+          // if (fileName && this.filesMap.has(fileName)) {
+          this.emit('fileReceived', {
+            fileContentBuffer,
+            fileName,
+            fileSize
+          });
+          /*}  else {
             this.emit('otaFinished');
             // check if is a valid OTA firmware file
             try {
               const fileBuffer = this.validateFirmwareFile(fileContentBuffer);
-              this.emit('otaReceived', {
+              this.emit('otaRequest', {
                 fileContentBuffer: fileBuffer,
                 fileSize
               });
@@ -1199,7 +1213,7 @@ class Trackle extends EventEmitter {
               this.publish('trackle/device/ota_result', err.message, 'PRIVATE');
               this.emit('error', err);
             }
-          }
+          } */
         }
       };
       this.on('Chunk', chunkHandler);
@@ -1214,7 +1228,6 @@ class Trackle extends EventEmitter {
         token: packet.token
       };
       this.writeCoapData(responsePacket);
-      this.emit('otaStarted');
       /******************************/
 
       // 4- wait for UpdateDone packet
@@ -1282,7 +1295,7 @@ class Trackle extends EventEmitter {
     }
   };
 
-  private validateFirmwareFile = (fileContentBuffer: Buffer): Buffer => {
+  /* private validateFirmwareFile = (fileContentBuffer: Buffer): Buffer => {
     const fileContentBufferWithoutCrc = fileContentBuffer.slice(
       0,
       fileContentBuffer.length - 4
@@ -1297,7 +1310,7 @@ class Trackle extends EventEmitter {
       throw new Error('Firmware validation failed: crc not valid');
     }
     return fileContentBuffer.slice(24, fileContentBuffer.length - 44);
-  };
+  };*/
 
   private sendFile = async (
     fileName: string,

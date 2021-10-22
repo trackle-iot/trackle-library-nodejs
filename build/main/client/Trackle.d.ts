@@ -78,7 +78,6 @@ declare class Trackle extends EventEmitter {
     private sendSignalStartReturn;
     private sendPingAck;
     private receiveFile;
-    private validateFirmwareFile;
     private sendFile;
     private listenFor;
     private pingServer;
