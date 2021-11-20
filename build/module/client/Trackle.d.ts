@@ -49,8 +49,8 @@ declare class Trackle extends EventEmitter {
     connected: () => boolean;
     setClaimCode: (claimCode: string) => void;
     file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => boolean;
-    post: (name: string, callFunctionCallback: (args: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
-    get: (name: string, type: string, retrieveValueCallback: (varName: string) => any | Promise<any>) => boolean;
+    post: (name: string, callFunctionCallback: (args?: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
+    get: (name: string, type: string, retrieveValueCallback: (args?: string) => any | Promise<any>) => boolean;
     disconnect: () => void;
     subscribe: (eventName: string, callback: (event: string, data: string) => void, subscriptionType?: SubscriptionType, subscriptionDeviceID?: string) => boolean;
     unsubscribe: (eventName: string) => void;

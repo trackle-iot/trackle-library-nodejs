@@ -61,7 +61,7 @@ CeFwQ0pbwkDASWc0yKT4tPf7tNA/zK8fqi4ddoLPOhoLQjgUbVRCBdxNJw==\n
 -----END PUBLIC KEY-----\n
 \n`;
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 
 const SYSTEM_EVENT_NAMES = ['iotready', 'trackle'];
 
@@ -336,7 +336,7 @@ class Trackle extends EventEmitter {
 
   public post = (
     name: string,
-    callFunctionCallback: (args: string) => number | Promise<number>,
+    callFunctionCallback: (args?: string) => number | Promise<number>,
     functionFlags?: FunctionFlags
   ): boolean => {
     if (name.length > EVENT_NAME_MAX_LENGTH) {
@@ -352,7 +352,7 @@ class Trackle extends EventEmitter {
   public get = (
     name: string,
     type: string,
-    retrieveValueCallback: (varName: string) => any | Promise<any>
+    retrieveValueCallback: (args?: string) => any | Promise<any>
   ): boolean => {
     if (name.length > EVENT_NAME_MAX_LENGTH) {
       return false;
@@ -747,6 +747,8 @@ class Trackle extends EventEmitter {
     this.isConnected = true;
     this.emit('connected');
 
+    this.sendDescribe(DESCRIBE_ALL);
+
     this.subscribe('trackle', this.handleSystemEvent);
 
     for await (const sub of this.subscriptionsMap.entries()) {
@@ -976,7 +978,10 @@ class Trackle extends EventEmitter {
           .map(o => o.value.toString('utf8'));
         uris.shift(); // Remove v
         const varName = uris.join('/');
-        this.sendVariable(varName, packet);
+        const args = packet.options
+          .filter(o => o.name === 'Uri-Query')
+          .map(o => o.value.toString('utf8'));
+        this.sendVariable(varName, args[0], packet);
         break;
       }
 
@@ -1091,20 +1096,30 @@ class Trackle extends EventEmitter {
     this.writeCoapData(packet);
   };
 
-  private sendDescribe = async (
+  private sendDescribe = (
     descriptionFlags: number,
-    serverPacket: CoapPacket.ParsedPacket
+    serverPacket?: CoapPacket.ParsedPacket
   ) => {
     const payload =
       descriptionFlags === DESCRIBE_ALL
         ? this.getDescription()
         : this.getDiagnostic();
     const packet = {
-      ack: true,
-      code: '2.05', // Content
+      ack: serverPacket ? true : false,
+      code: serverPacket ? '2.05' : '0.02', // Content
+      confirmable: !serverPacket ? true : false,
       messageId: this.messageID, // not next
+      options: !serverPacket
+        ? [
+            { name: 'Uri-Path', value: Buffer.from(CoapUriType.Describe) },
+            {
+              name: 'Uri-Query',
+              value: CoapMessages.toBinary(DESCRIBE_ALL, 'uint8')
+            }
+          ]
+        : undefined,
       payload,
-      token: serverPacket.token
+      token: serverPacket ? serverPacket.token : undefined
     };
 
     this.writeCoapData(packet);
@@ -1611,6 +1626,7 @@ class Trackle extends EventEmitter {
 
   private sendVariable = async (
     varName: string,
+    args: string | null,
     serverPacket: CoapPacket.ParsedPacket
   ) => {
     if (!this.isConnected) {
@@ -1625,7 +1641,7 @@ class Trackle extends EventEmitter {
       const [type, retrieveValueCallback] = this.variablesMap.get(hasName);
       let variableValue: any;
       try {
-        variableValue = await retrieveValueCallback(varName);
+        variableValue = await retrieveValueCallback(args);
         if (
           (type === 'string' || type === 'json') &&
           JSON.stringify(variableValue).length > 622
@@ -1700,7 +1716,7 @@ class Trackle extends EventEmitter {
 
   private sendEvent = (
     name: string,
-    data: string,
+    data: string = null,
     nextMessageID: number,
     confirmable: boolean,
     eventType?: EventType
@@ -1708,7 +1724,7 @@ class Trackle extends EventEmitter {
     if (!this.isConnected) {
       return false;
     }
-    const payload = Buffer.from(data);
+    const payload = data ? Buffer.from(data) : undefined;
     const packet = {
       code: 'POST',
       confirmable,
