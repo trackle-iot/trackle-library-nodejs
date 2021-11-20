@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.2.0...v1.3.0) (2021-11-20)
+
+
+### Features
+
+* add ota from url ([af85450](https://github.com/trackle-iot/trackle-library-nodejs/commit/af85450664fcd8115c4145c333024e0ee3b4ae02))
+* args in var ([f1acb3c](https://github.com/trackle-iot/trackle-library-nodejs/commit/f1acb3c40582eafa3214e25d18ff2890add8c3a7))
+
+
+### Bug Fixes
+
+* better ota validation ([944ede0](https://github.com/trackle-iot/trackle-library-nodejs/commit/944ede0cda980c2c18e8aba539d100d32714488a))
+* small fixes ([02699ef](https://github.com/trackle-iot/trackle-library-nodejs/commit/02699ef5829b5a08e59f91b2b80591c83aba3015))
+
 ## [1.2.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.1.2...v1.2.0) (2021-10-19)
 
 
