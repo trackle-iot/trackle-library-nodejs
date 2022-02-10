@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.3.0...v1.4.0) (2022-02-10)
+
+
+### Features
+
+* properties ([7fc539f](https://github.com/trackle-iot/trackle-library-nodejs/commit/7fc539f83aee90e06a9816fcb47376e1d3277a3d))
+
+
+### Bug Fixes
+
+* change sendProperties event ([29c5b0a](https://github.com/trackle-iot/trackle-library-nodejs/commit/29c5b0a6a58393344c85e23963062aa936f23b96))
+* method name ([32f0e78](https://github.com/trackle-iot/trackle-library-nodejs/commit/32f0e78fe07a8f733174e4251d7b5a1f900abe1b))
+
 ## [1.3.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.2.0...v1.3.0) (2021-11-20)
 
 
