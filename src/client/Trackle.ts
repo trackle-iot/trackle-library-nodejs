@@ -71,6 +71,12 @@ export interface ICloudOptions {
   port?: number;
 }
 
+export const updatePropertiesErrors = {
+  BAD_REQUEST: -1,
+  NOT_FOUND: -3,
+  NOT_WRITABLE: -2
+};
+
 const getPlatformID = (): number => {
   const platform = os.platform();
   const arch = os.arch();
@@ -87,9 +93,6 @@ const getPlatformID = (): number => {
   }
   return 103; // linux default ??
 };
-
-const delay = async (ms: number): Promise<void> =>
-  await new Promise(resolve => setTimeout(resolve, ms));
 
 EventEmitter.defaultMaxListeners = 100;
 
@@ -139,6 +142,10 @@ class Trackle extends EventEmitter {
   private sentPacketCounterMap: Map<number, number>;
   private keepalive: number = 30000;
   private claimCode: string;
+  private updatePropertiesCallback: (
+    name: string,
+    value: string
+  ) => number | Promise<number>;
 
   constructor(cloudOptions: ICloudOptions = {}) {
     super();
@@ -364,6 +371,17 @@ class Trackle extends EventEmitter {
     return true;
   };
 
+  public setupdatePropertiesCallback = (
+    updatePropertiesCallback: (
+      name: string,
+      value: string
+    ) => number | Promise<number>
+    // propsFlags?: PropertiesFlags
+  ): boolean => {
+    this.updatePropertiesCallback = updatePropertiesCallback;
+    return true;
+  };
+
   public disconnect = () => {
     this.disconnectInternal();
     this.isDisconnected = true;
@@ -408,6 +426,26 @@ class Trackle extends EventEmitter {
     }
     const subValue = this.subscriptionsMap.get(eventName);
     this.removeListener(eventName, subValue[0]);
+  };
+
+  public sendProperties = async (properties: string) => {
+    if (!this.isConnected) {
+      return;
+    }
+    try {
+      /* const props = Array.from(this.propsMap, ([name, [type, value]]) => ({ name, type, value })).filter(({ name }) => properties.includes(name)).reduce((acc, cur) => {
+        acc[cur.name] = cur.type === 'boolean' ? Boolean(cur.value) : cur.type === 'number' ? Number(cur.value) : cur.value;
+        return acc;
+      }, {});*/
+      JSON.parse(properties);
+      return await this.publish(
+        'trackle/device/properties',
+        properties,
+        'PRIVATE'
+      );
+    } catch (err) {
+      this.emit('error', new Error('Properties: ' + err.message));
+    }
   };
 
   public publish = async (
@@ -752,12 +790,10 @@ class Trackle extends EventEmitter {
     this.subscribe('trackle', this.handleSystemEvent);
 
     for await (const sub of this.subscriptionsMap.entries()) {
-      await delay(50);
       this.sendSubscribe(sub[0], sub[1][0], sub[1][1], sub[1][2]);
     }
 
     // send getTime
-    await delay(50);
     this.sendTimeRequest();
 
     // claimCode
@@ -766,24 +802,21 @@ class Trackle extends EventEmitter {
       this.claimCode.length > 0 &&
       this.claimCode.length < 70
     ) {
-      await delay(25);
       this.publish('trackle/device/claim/code', this.claimCode, 'PRIVATE');
     }
 
-    await delay(25);
     this.publish(
       'trackle/hardware/ota_chunk_size',
       CHUNK_SIZE.toString(),
       'PRIVATE'
     );
 
-    await delay(25);
     if (this.otaUpdateEnabled) {
       this.publish('trackle/device/updates/enabled', 'true', 'PRIVATE');
     } else {
       this.publish('trackle/device/updates/enabled', 'false', 'PRIVATE');
     }
-    await delay(25);
+
     if (this.otaUpdateForced) {
       this.publish('trackle/device/updates/forced', 'true', 'PRIVATE');
     } else {
@@ -1019,6 +1052,19 @@ class Trackle extends EventEmitter {
           .map(o => o.value.toString('hex'));
         this.emit('signal', parseInt(args[0], 16) === 1);
         this.sendSignalStartReturn(packet);
+        break;
+      }
+
+      case CoapUriType.UpdateProperty: {
+        const uris = packet.options
+          .filter(o => o.name === 'Uri-Path')
+          .map(o => o.value.toString('utf8'));
+        uris.shift(); // Remove p
+        const propName = uris.join('/');
+        const args = packet.options
+          .filter(o => o.name === 'Uri-Query')
+          .map(o => o.value.toString('utf8'));
+        this.sendUpdatePropResult(propName, args[0], packet);
         break;
       }
 
@@ -1671,6 +1717,49 @@ class Trackle extends EventEmitter {
     } else {
       this.writeError(serverPacket, `Variable ${varName} not found`, '4.04');
       this.emit('error', new Error(`Variable ${varName} not found`));
+    }
+  };
+
+  private sendUpdatePropResult = async (
+    property: string,
+    value: string,
+    serverPacket: CoapPacket.ParsedPacket
+  ) => {
+    if (!this.isConnected) {
+      return;
+    }
+
+    if (value.length > 622) {
+      this.writeError(serverPacket, 'Args max length is 622 bytes', '4.00');
+      this.emit('error', new Error('Args max length is 622 bytes'));
+      return;
+    }
+
+    if (this.updatePropertiesCallback) {
+      let returnValue: number;
+      try {
+        returnValue = await this.updatePropertiesCallback(property, value);
+        const packet = {
+          code: '2.04',
+          messageId: this.nextMessageID(),
+          payload: CoapMessages.toBinary(returnValue, 'int32'),
+          token: serverPacket.token
+        };
+        this.writeCoapData(packet);
+      } catch (err) {
+        if (returnValue) {
+          this.messageID -= 1;
+        }
+        this.writeError(serverPacket, err.message, err.status || '5.00');
+        this.emit('error', new Error(err.message));
+      }
+    } else {
+      this.writeError(
+        serverPacket,
+        'setupdatePropertiesCallback not defined',
+        '5.00'
+      );
+      this.emit('error', new Error('setupdatePropertiesCallback not defined'));
     }
   };
 

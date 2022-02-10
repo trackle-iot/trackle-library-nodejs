@@ -1,3 +1,3 @@
-import Trackle from './client/Trackle';
-export { Trackle };
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaW5kZXguanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi9zcmMvaW5kZXgudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsT0FBTyxPQUEwQixNQUFNLGtCQUFrQixDQUFDO0FBRTFELE9BQU8sRUFBRSxPQUFPLEVBQWlCLENBQUMifQ==
+import Trackle, { updatePropertiesErrors } from './client/Trackle';
+export { Trackle, updatePropertiesErrors };
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaW5kZXguanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi9zcmMvaW5kZXgudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsT0FBTyxPQUFPLEVBQUUsRUFBaUIsc0JBQXNCLEVBQUUsTUFBTSxrQkFBa0IsQ0FBQztBQUVsRixPQUFPLEVBQUUsT0FBTyxFQUFpQixzQkFBc0IsRUFBRSxDQUFDIn0=

@@ -9,6 +9,11 @@ export interface ICloudOptions {
     publicKeyPEM?: string;
     port?: number;
 }
+export declare const updatePropertiesErrors: {
+    BAD_REQUEST: number;
+    NOT_FOUND: number;
+    NOT_WRITABLE: number;
+};
 declare class Trackle extends EventEmitter {
     cloud: ICloudOptions;
     private cipherStream;
@@ -42,6 +47,7 @@ declare class Trackle extends EventEmitter {
     private sentPacketCounterMap;
     private keepalive;
     private claimCode;
+    private updatePropertiesCallback;
     constructor(cloudOptions?: ICloudOptions);
     forceTcpProtocol: () => void;
     begin: (deviceID: string, privateKey: string | Buffer, productID?: number, productFirmwareVersion?: number, platformID?: number) => Promise<void>;
@@ -51,9 +57,11 @@ declare class Trackle extends EventEmitter {
     file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => boolean;
     post: (name: string, callFunctionCallback: (args?: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
     get: (name: string, type: string, retrieveValueCallback: (args?: string) => any | Promise<any>) => boolean;
+    setupdatePropertiesCallback: (updatePropertiesCallback: (name: string, value: string) => number | Promise<number>) => boolean;
     disconnect: () => void;
     subscribe: (eventName: string, callback: (event: string, data: string) => void, subscriptionType?: SubscriptionType, subscriptionDeviceID?: string) => boolean;
     unsubscribe: (eventName: string) => void;
+    sendProperties: (properties: string) => Promise<void>;
     publish: (eventName: string, data?: string, eventType?: EventType, eventFlags?: EventFlags, messageID?: string) => Promise<void>;
     enableUpdates: () => void;
     disableUpdates: () => void;
@@ -84,6 +92,7 @@ declare class Trackle extends EventEmitter {
     private writeError;
     private sendFunctionResult;
     private sendVariable;
+    private sendUpdatePropResult;
     private writeCoapData;
     private writeData;
     private sendEvent;

@@ -11,6 +11,7 @@ declare const COAP_URI_TYPE: {
     Subscribe: string;
     UpdateBegin: string;
     UpdateDone: string;
+    UpdateProperty: string;
     UpdateReady: string;
     Variable: string;
 };

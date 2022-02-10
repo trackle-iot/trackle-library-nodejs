@@ -11,6 +11,7 @@ const COAP_URI_TYPE = {
   Subscribe: 'e',
   UpdateBegin: 'u',
   UpdateDone: 'u',
+  UpdateProperty: 'p',
   UpdateReady: 'u',
   Variable: 'v'
 };

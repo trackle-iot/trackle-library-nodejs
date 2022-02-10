@@ -1,3 +1,6 @@
-import Trackle, { ICloudOptions } from './client/Trackle';
+import Trackle, {
+  ICloudOptions,
+  updatePropertiesErrors
+} from './client/Trackle';
 
-export { Trackle, ICloudOptions };
+export { Trackle, ICloudOptions, updatePropertiesErrors };
