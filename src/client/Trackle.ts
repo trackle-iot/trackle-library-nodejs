@@ -371,7 +371,7 @@ class Trackle extends EventEmitter {
     return true;
   };
 
-  public setupdatePropertiesCallback = (
+  public setUpdatePropertiesCallback = (
     updatePropertiesCallback: (
       name: string,
       value: string
@@ -1756,10 +1756,10 @@ class Trackle extends EventEmitter {
     } else {
       this.writeError(
         serverPacket,
-        'setupdatePropertiesCallback not defined',
+        'setUpdatePropertiesCallback not defined',
         '5.00'
       );
-      this.emit('error', new Error('setupdatePropertiesCallback not defined'));
+      this.emit('error', new Error('setUpdatePropertiesCallback not defined'));
     }
   };
 

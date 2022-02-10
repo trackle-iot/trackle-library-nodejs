@@ -224,7 +224,7 @@ class Trackle extends EventEmitter {
             this.variablesMap.set(name, [type, retrieveValueCallback]);
             return true;
         };
-        this.setupdatePropertiesCallback = (updatePropertiesCallback
+        this.setUpdatePropertiesCallback = (updatePropertiesCallback
         // propsFlags?: PropertiesFlags
         ) => {
             this.updatePropertiesCallback = updatePropertiesCallback;
@@ -1335,8 +1335,8 @@ class Trackle extends EventEmitter {
                 }
             }
             else {
-                this.writeError(serverPacket, 'setupdatePropertiesCallback not defined', '5.00');
-                this.emit('error', new Error('setupdatePropertiesCallback not defined'));
+                this.writeError(serverPacket, 'setUpdatePropertiesCallback not defined', '5.00');
+                this.emit('error', new Error('setUpdatePropertiesCallback not defined'));
             }
         };
         this.writeCoapData = (packet) => {
