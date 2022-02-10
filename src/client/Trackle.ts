@@ -438,11 +438,7 @@ class Trackle extends EventEmitter {
         return acc;
       }, {});*/
       JSON.parse(properties);
-      return await this.publish(
-        'trackle/device/properties',
-        properties,
-        'PRIVATE'
-      );
+      return await this.publish('trackle/p', properties, 'PRIVATE');
     } catch (err) {
       this.emit('error', new Error('Properties: ' + err.message));
     }
