@@ -139,7 +139,7 @@ class Trackle extends EventEmitter {
     string,
     [string, (varName: string) => any | Promise<any>]
   >;
-  private sentPacketCounterMap: Map<number, number>;
+  // private sentPacketCounterMap: Map<number, number>;
   private keepalive: number = 30000;
   private claimCode: string;
   private updatePropertiesCallback: (
@@ -255,7 +255,7 @@ class Trackle extends EventEmitter {
       );
     }
     this.isConnecting = true;
-    this.sentPacketCounterMap = new Map<number, number>();
+    // this.sentPacketCounterMap = new Map<number, number>();
 
     if (!this.forceTcp) {
       const handshakeTimeout = setTimeout(() => {
@@ -913,6 +913,9 @@ class Trackle extends EventEmitter {
           this.emit('error', err);
         }
         break;
+      case 'trackle/device/pin_code':
+        this.emit('pinCode', data);
+        break;
     }
   };
 
@@ -1150,7 +1153,7 @@ class Trackle extends EventEmitter {
       ack: serverPacket ? true : false,
       code: serverPacket ? '2.05' : '0.02', // Content
       confirmable: !serverPacket ? true : false,
-      messageId: this.messageID, // not next
+      messageId: serverPacket ? this.messageID : this.nextMessageID(),
       options: !serverPacket
         ? [
             { name: 'Uri-Path', value: Buffer.from(CoapUriType.Describe) },
@@ -1760,7 +1763,7 @@ class Trackle extends EventEmitter {
   };
 
   private writeCoapData = (packet: CoapPacket.Packet): boolean => {
-    if (packet.confirmable) {
+    /* if (packet.confirmable) {
       let sentPacketCounter = this.sentPacketCounterMap.get(packet.messageId);
       if (!sentPacketCounter) {
         sentPacketCounter = 1;
@@ -1782,7 +1785,7 @@ class Trackle extends EventEmitter {
       } else {
         this.reconnect(new Error('complete timeout for packet sent'));
       }
-    }
+    }*/
     const packetBuffer = CoapPacket.generate(packet);
     return this.writeData(packetBuffer);
   };
