@@ -61,7 +61,7 @@ CeFwQ0pbwkDASWc0yKT4tPf7tNA/zK8fqi4ddoLPOhoLQjgUbVRCBdxNJw==\n
 -----END PUBLIC KEY-----\n
 \n`;
 
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
 
 const SYSTEM_EVENT_NAMES = ['iotready', 'trackle'];
 
