@@ -256,6 +256,10 @@ class Trackle extends EventEmitter {
     }
     this.isConnecting = true;
     // this.sentPacketCounterMap = new Map<number, number>();
+    this.emit('connecting', {
+      host: this.host,
+      port: this.port
+    });
 
     if (!this.forceTcp) {
       const handshakeTimeout = setTimeout(() => {
@@ -657,7 +661,7 @@ class Trackle extends EventEmitter {
   };
 
   private reconnect = (error: NodeJS.ErrnoException): void => {
-    if (this.isDisconnected) {
+    if (this.isConnected) {
       return;
     }
     if (error !== undefined) {
