@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.4.2](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.4.1...v1.4.2) (2022-03-28)
+
+
+### Bug Fixes
+
+* reconnection ([c0fdf18](https://github.com/trackle-iot/trackle-library-nodejs/commit/c0fdf182a8cdb00e9c4757b5477d2c51c4d0aa23))
+
 ### [1.4.1](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.4.0...v1.4.1) (2022-03-28)
 
 ## [1.4.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.3.0...v1.4.0) (2022-02-10)

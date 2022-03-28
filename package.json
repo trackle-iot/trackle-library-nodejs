@@ -1,6 +1,6 @@
 {
   "name": "trackle-library-nodejs",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "NodeJS Trackle library",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
