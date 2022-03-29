@@ -139,7 +139,7 @@ class Trackle extends EventEmitter {
     string,
     [string, (varName: string) => any | Promise<any>]
   >;
-  // private sentPacketCounterMap: Map<number, number>;
+  private sentPacketCounterMap: Map<number, number>;
   private keepalive: number = 30000;
   private claimCode: string;
   private updatePropertiesCallback: (
@@ -255,7 +255,7 @@ class Trackle extends EventEmitter {
       );
     }
     this.isConnecting = true;
-    // this.sentPacketCounterMap = new Map<number, number>();
+    this.sentPacketCounterMap = new Map<number, number>();
     this.emit('connecting', {
       host: this.host,
       port: this.port
@@ -661,9 +661,6 @@ class Trackle extends EventEmitter {
   };
 
   private reconnect = (error: NodeJS.ErrnoException): void => {
-    if (this.isConnected) {
-      return;
-    }
     if (error !== undefined) {
       if (error.code === 'ENOTFOUND') {
         this.emit(
@@ -1767,7 +1764,7 @@ class Trackle extends EventEmitter {
   };
 
   private writeCoapData = (packet: CoapPacket.Packet): boolean => {
-    /* if (packet.confirmable) {
+    if (packet.confirmable) {
       let sentPacketCounter = this.sentPacketCounterMap.get(packet.messageId);
       if (!sentPacketCounter) {
         sentPacketCounter = 1;
@@ -1789,7 +1786,7 @@ class Trackle extends EventEmitter {
       } else {
         this.reconnect(new Error('complete timeout for packet sent'));
       }
-    }*/
+    }
     const packetBuffer = CoapPacket.generate(packet);
     return this.writeData(packetBuffer);
   };

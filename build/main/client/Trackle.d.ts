@@ -44,6 +44,7 @@ declare class Trackle extends EventEmitter {
     private functionsMap;
     private subscriptionsMap;
     private variablesMap;
+    private sentPacketCounterMap;
     private keepalive;
     private claimCode;
     private updatePropertiesCallback;
