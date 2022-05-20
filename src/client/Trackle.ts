@@ -129,7 +129,7 @@ class Trackle extends EventEmitter {
   >;
   private functionsMap: Map<
     string,
-    [string, (args: string) => number | Promise<number>]
+    [string, (args: string, caller?: string) => number | Promise<number>]
   >;
   private subscriptionsMap: Map<
     string,
@@ -144,7 +144,8 @@ class Trackle extends EventEmitter {
   private claimCode: string;
   private updatePropertiesCallback: (
     name: string,
-    value: string
+    value: string,
+    caller?: string
   ) => number | Promise<number>;
 
   constructor(cloudOptions: ICloudOptions = {}) {
@@ -347,7 +348,10 @@ class Trackle extends EventEmitter {
 
   public post = (
     name: string,
-    callFunctionCallback: (args?: string) => number | Promise<number>,
+    callFunctionCallback: (
+      args: string,
+      caller?: string
+    ) => number | Promise<number>,
     functionFlags?: FunctionFlags
   ): boolean => {
     if (name.length > EVENT_NAME_MAX_LENGTH) {
@@ -378,7 +382,8 @@ class Trackle extends EventEmitter {
   public setUpdatePropertiesCallback = (
     updatePropertiesCallback: (
       name: string,
-      value: string
+      value: string,
+      caller?: string
     ) => number | Promise<number>
     // propsFlags?: PropertiesFlags
   ): boolean => {
@@ -1064,7 +1069,7 @@ class Trackle extends EventEmitter {
         const args = packet.options
           .filter(o => o.name === 'Uri-Query')
           .map(o => o.value.toString('utf8'));
-        this.sendUpdatePropResult(propName, args[0], packet);
+        this.sendUpdatePropResult(propName, args[0], args[1], packet);
         break;
       }
 
@@ -1645,7 +1650,7 @@ class Trackle extends EventEmitter {
 
       let returnValue: number;
       try {
-        returnValue = await callFunctionCallback(args);
+        returnValue = await callFunctionCallback(args, caller);
         const packet = {
           code: '2.04',
           messageId: this.nextMessageID(),
@@ -1723,6 +1728,7 @@ class Trackle extends EventEmitter {
   private sendUpdatePropResult = async (
     property: string,
     value: string,
+    caller: string,
     serverPacket: CoapPacket.ParsedPacket
   ) => {
     if (!this.isConnected) {
@@ -1738,7 +1744,11 @@ class Trackle extends EventEmitter {
     if (this.updatePropertiesCallback) {
       let returnValue: number;
       try {
-        returnValue = await this.updatePropertiesCallback(property, value);
+        returnValue = await this.updatePropertiesCallback(
+          property,
+          value,
+          caller
+        );
         const packet = {
           code: '2.04',
           messageId: this.nextMessageID(),
