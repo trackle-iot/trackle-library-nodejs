@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.5.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.4.2...v1.5.0) (2022-05-20)
+
+
+### Features
+
+* add caller as new function and properties params ([0d5deaf](https://github.com/trackle-iot/trackle-library-nodejs/commit/0d5deaf92bdfac4d3d0dc6c7c4e3796b74ed2998))
+
+
+### Bug Fixes
+
+* restore packets retransmission ([df03a82](https://github.com/trackle-iot/trackle-library-nodejs/commit/df03a82f997a182b480fc6748465dede3feb28c0))
+
 ### [1.4.2](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.4.1...v1.4.2) (2022-03-28)
 
 
