@@ -9,7 +9,13 @@ export interface ICloudOptions {
     publicKeyPEM?: string;
     port?: number;
 }
-export declare const updatePropertiesErrors: {
+export interface IProperty {
+    propName: string;
+    value: number;
+    sync: boolean;
+    writable: boolean;
+}
+export declare const updatePropertyErrors: {
     BAD_REQUEST: number;
     NOT_FOUND: number;
     NOT_WRITABLE: number;
@@ -37,17 +43,20 @@ declare class Trackle extends EventEmitter {
     private productID;
     private port;
     private privateKey;
+    private sendPropsChangedInterval;
     private serverKey;
     private socket;
     private state;
     private filesMap;
     private functionsMap;
+    private propsMap;
+    private propsChangedArray;
     private subscriptionsMap;
     private variablesMap;
     private sentPacketCounterMap;
     private keepalive;
     private claimCode;
-    private updatePropertiesCallback;
+    private updatePropertyCallback;
     constructor(cloudOptions?: ICloudOptions);
     forceTcpProtocol: () => void;
     begin: (deviceID: string, privateKey: string | Buffer, productID?: number, productFirmwareVersion?: number, platformID?: number) => Promise<void>;
@@ -57,11 +66,17 @@ declare class Trackle extends EventEmitter {
     file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => boolean;
     post: (name: string, callFunctionCallback: (args: string, caller?: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
     get: (name: string, type: string, retrieveValueCallback: (args?: string) => any | Promise<any>) => boolean;
-    setUpdatePropertiesCallback: (updatePropertiesCallback: (name: string, value: string, caller?: string) => number | Promise<number>) => boolean;
+    prop: (name: string, value: number, sync?: boolean, writable?: boolean) => boolean;
+    updatePropValue: (name: string, value: number) => boolean;
+    setUpdatePropertyCallback: (updatePropertyCallback: (name: string, value: number, caller?: string) => number | Promise<number>) => boolean;
     disconnect: () => void;
     subscribe: (eventName: string, callback: (event: string, data: string) => void, subscriptionType?: SubscriptionType, subscriptionDeviceID?: string) => boolean;
     unsubscribe: (eventName: string) => void;
-    sendProperties: (properties: string) => Promise<void>;
+    /**
+     * Send properties
+     * @param properties: string[] - array of property names to send. if passed empty do not send anything
+     */
+    sendProperties: (properties?: string[]) => Promise<void>;
     publish: (eventName: string, data?: string, eventType?: EventType, eventFlags?: EventFlags, messageID?: string) => Promise<void>;
     enableUpdates: () => void;
     disableUpdates: () => void;
