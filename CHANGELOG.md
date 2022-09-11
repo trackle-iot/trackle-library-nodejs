@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.5.0...v1.6.0) (2022-09-11)
+
+
+### Features
+
+* add props in library ([6de1f6e](https://github.com/trackle-iot/trackle-library-nodejs/commit/6de1f6e1c1aee956e390f65be12aaa907cb1392d))
+
 ## [1.5.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.4.2...v1.5.0) (2022-05-20)
 
 
