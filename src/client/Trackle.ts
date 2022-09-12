@@ -36,6 +36,7 @@ const DESCRIBE_ALL = DESCRIBE_APPLICATION | DESCRIBE_SYSTEM;
 const CHUNK_SIZE = 512;
 
 const SEND_EVENT_ACK_TIMEOUT = 5000;
+const SYNC_PROPS_CHANGE_INTERVAL = 1000;
 
 type DeviceState = 'next' | 'nonce' | 'set-session-key';
 type EventType = 'PRIVATE' | 'PUBLIC';
@@ -128,7 +129,7 @@ class Trackle extends EventEmitter {
   private productID: number;
   private port: number;
   private privateKey: NodeRSA | ECKey;
-  private sendPropsChangedInterval: number;
+  private syncPropsChangedInterval: number;
   private serverKey: NodeRSA | ECKey;
   private socket: Socket | dtls.Socket;
   private state: DeviceState;
@@ -153,7 +154,7 @@ class Trackle extends EventEmitter {
   private sentPacketCounterMap: Map<number, number>;
   private keepalive: number = 30000;
   private claimCode: string;
-  private updatePropertyCallback: (
+  private updatePropCallback: (
     name: string,
     value: number,
     caller?: string
@@ -416,28 +417,29 @@ class Trackle extends EventEmitter {
   public updatePropValue = (name: string, value: number): boolean => {
     if (this.propsMap.has(name)) {
       const prop = this.propsMap.get(name);
-      if (
-        prop.sync &&
-        prop.value !== value &&
-        !this.propsChangedArray.includes(name)
-      ) {
-        this.propsChangedArray.push(name);
+      // if value is changed
+      if (prop.value !== value) {
+        // if sync add to changed array
+        if (prop.sync && !this.propsChangedArray.includes(name)) {
+          this.propsChangedArray.push(name);
+        }
+        // set value and return true to inform it is changed
+        prop.value = value;
+        return true;
       }
-      prop.value = value;
-      return true;
     }
-    return false;
+    return false; // not found or not changed
   };
 
-  public setUpdatePropertyCallback = (
-    updatePropertyCallback: (
+  public setUpdatePropCallback = (
+    updatePropCallback: (
       name: string,
       value: number,
       caller?: string
     ) => number | Promise<number>
     // propsFlags?: PropertiesFlags
   ): boolean => {
-    this.updatePropertyCallback = updatePropertyCallback;
+    this.updatePropCallback = updatePropCallback;
     return true;
   };
 
@@ -488,23 +490,23 @@ class Trackle extends EventEmitter {
   };
 
   /**
-   * Send properties
-   * @param properties: string[] - array of property names to send. if passed empty do not send anything
+   * Sync props
+   * @param props: string[] - array of property names to send. if passed empty do not send anything
    */
-  public sendProperties = async (properties?: string[]) => {
+  public syncProps = async (props?: string[]) => {
     if (!this.isConnected) {
       return;
     }
     try {
-      let props = Array.from(this.propsMap, ([name, property]) => ({
+      let propsArray = Array.from(this.propsMap, ([name, property]) => ({
         name,
         property
       }));
-      if (properties) {
-        props = props.filter(({ name }) => properties.includes(name));
+      if (props) {
+        propsArray = propsArray.filter(({ name }) => props.includes(name));
       }
-      if (props.length) {
-        const propsToSend = props.reduce((acc, cur) => {
+      if (propsArray.length) {
+        const propsToSend = propsArray.reduce((acc, cur) => {
           acc[cur.name] = cur.property.value;
           // remove from changed array
           if (this.propsChangedArray.includes(cur.name)) {
@@ -521,7 +523,7 @@ class Trackle extends EventEmitter {
         );
       }
     } catch (err) {
-      this.emit('error', new Error('Properties: ' + err.message));
+      this.emit('error', new Error('props: ' + err.message));
     }
   };
 
@@ -736,9 +738,9 @@ class Trackle extends EventEmitter {
       this.pingInterval = null;
     }
 
-    if (this.sendPropsChangedInterval) {
-      clearInterval(this.sendPropsChangedInterval as any);
-      this.sendPropsChangedInterval = null;
+    if (this.syncPropsChangedInterval) {
+      clearInterval(this.syncPropsChangedInterval as any);
+      this.syncPropsChangedInterval = null;
     }
   };
 
@@ -896,13 +898,15 @@ class Trackle extends EventEmitter {
       this.publish('trackle/device/updates/forced', 'false', 'PRIVATE');
     }
 
-    this.sendProperties();
-    // Send properties changes
-    this.sendPropsChangedInterval = setInterval(() => {
+    // Sync props changes
+    this.syncPropsChangedInterval = setInterval(() => {
       if (this.propsChangedArray.length) {
-        this.sendProperties(this.propsChangedArray);
+        this.syncProps(this.propsChangedArray);
       }
-    }, 1000) as any;
+    }, SYNC_PROPS_CHANGE_INTERVAL) as any;
+
+    // Sync props at connection
+    this.syncProps();
   };
 
   private handleSystemEvent = async (
@@ -1001,6 +1005,9 @@ class Trackle extends EventEmitter {
         break;
       case 'trackle/device/pin_code':
         this.emit('pinCode', data);
+        break;
+      case 'trackle/device/props/update':
+        this.syncProps();
         break;
     }
   };
@@ -1818,10 +1825,10 @@ class Trackle extends EventEmitter {
     if (this.propsMap.has(propName)) {
       const prop = this.propsMap.get(propName);
       if (prop.writable) {
-        if (this.updatePropertyCallback) {
+        if (this.updatePropCallback) {
           let returnValue: number;
           try {
-            returnValue = await this.updatePropertyCallback(
+            returnValue = await this.updatePropCallback(
               propName,
               value,
               caller
@@ -1846,13 +1853,10 @@ class Trackle extends EventEmitter {
         } else {
           this.writeError(
             serverPacket,
-            'setUpdatePropertyCallback not defined',
+            'setUpdatePropCallback not defined',
             '5.00'
           );
-          this.emit(
-            'error',
-            new Error('setUpdatePropertyCallback not defined')
-          );
+          this.emit('error', new Error('setUpdatePropCallback not defined'));
         }
       } else {
         this.writeError(

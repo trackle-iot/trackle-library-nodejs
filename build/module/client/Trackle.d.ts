@@ -43,7 +43,7 @@ declare class Trackle extends EventEmitter {
     private productID;
     private port;
     private privateKey;
-    private sendPropsChangedInterval;
+    private syncPropsChangedInterval;
     private serverKey;
     private socket;
     private state;
@@ -56,7 +56,7 @@ declare class Trackle extends EventEmitter {
     private sentPacketCounterMap;
     private keepalive;
     private claimCode;
-    private updatePropertyCallback;
+    private updatePropCallback;
     constructor(cloudOptions?: ICloudOptions);
     forceTcpProtocol: () => void;
     begin: (deviceID: string, privateKey: string | Buffer, productID?: number, productFirmwareVersion?: number, platformID?: number) => Promise<void>;
@@ -68,15 +68,15 @@ declare class Trackle extends EventEmitter {
     get: (name: string, type: string, retrieveValueCallback: (args?: string) => any | Promise<any>) => boolean;
     prop: (name: string, value: number, sync?: boolean, writable?: boolean) => boolean;
     updatePropValue: (name: string, value: number) => boolean;
-    setUpdatePropertyCallback: (updatePropertyCallback: (name: string, value: number, caller?: string) => number | Promise<number>) => boolean;
+    setUpdatePropCallback: (updatePropCallback: (name: string, value: number, caller?: string) => number | Promise<number>) => boolean;
     disconnect: () => void;
     subscribe: (eventName: string, callback: (event: string, data: string) => void, subscriptionType?: SubscriptionType, subscriptionDeviceID?: string) => boolean;
     unsubscribe: (eventName: string) => void;
     /**
-     * Send properties
-     * @param properties: string[] - array of property names to send. if passed empty do not send anything
+     * Sync props
+     * @param props: string[] - array of property names to send. if passed empty do not send anything
      */
-    sendProperties: (properties?: string[]) => Promise<void>;
+    syncProps: (props?: string[]) => Promise<void>;
     publish: (eventName: string, data?: string, eventType?: EventType, eventFlags?: EventFlags, messageID?: string) => Promise<void>;
     enableUpdates: () => void;
     disableUpdates: () => void;
