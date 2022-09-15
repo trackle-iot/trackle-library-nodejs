@@ -76,7 +76,6 @@ export interface ICloudOptions {
 export interface IProperty {
   propName: string;
   value: number;
-  sync: boolean;
   writable: boolean;
 }
 
@@ -122,6 +121,7 @@ class Trackle extends EventEmitter {
   private isConnecting: boolean;
   private isDisconnected: boolean;
   private messageID: number = 0;
+  private otaMethod: number = 0;
   private owners: string[];
   private pingInterval: number;
   private platformID: number;
@@ -129,7 +129,7 @@ class Trackle extends EventEmitter {
   private productID: number;
   private port: number;
   private privateKey: NodeRSA | ECKey;
-  private syncPropsChangedInterval: number;
+  private syncPropsInterval: number;
   private serverKey: NodeRSA | ECKey;
   private socket: Socket | dtls.Socket;
   private state: DeviceState;
@@ -142,7 +142,7 @@ class Trackle extends EventEmitter {
     [string, (args: string, caller?: string) => number | Promise<number>]
   >;
   private propsMap: Map<string, IProperty>;
-  private propsChangedArray: string[];
+  private propsToSyncArray: string[];
   private subscriptionsMap: Map<
     string,
     [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType, string]
@@ -172,7 +172,7 @@ class Trackle extends EventEmitter {
       [string, (args: string) => number | Promise<number>]
     >();
     this.propsMap = new Map<string, IProperty>();
-    this.propsChangedArray = [];
+    this.propsToSyncArray = [];
     this.subscriptionsMap = new Map<
       string,
       [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType, string]
@@ -393,12 +393,7 @@ class Trackle extends EventEmitter {
     return true;
   };
 
-  public prop = (
-    name: string,
-    value: number,
-    sync?: boolean,
-    writable?: boolean
-  ): boolean => {
+  public prop = (name: string, value: number, writable?: boolean): boolean => {
     if (name.length > EVENT_NAME_MAX_LENGTH) {
       return false;
     }
@@ -407,28 +402,31 @@ class Trackle extends EventEmitter {
     }
     this.propsMap.set(name, {
       propName: name,
-      sync: sync || false,
       value,
       writable: writable || false
     });
     return true;
   };
 
-  public updatePropValue = (name: string, value: number): boolean => {
+  public syncProp = (name: string, value: number, force?: boolean): boolean => {
     if (this.propsMap.has(name)) {
       const prop = this.propsMap.get(name);
       // if value is changed
-      if (prop.value !== value) {
-        // if sync add to changed array
-        if (prop.sync && !this.propsChangedArray.includes(name)) {
-          this.propsChangedArray.push(name);
-        }
-        // set value and return true to inform it is changed
-        prop.value = value;
-        return true;
+      if (
+        force ||
+        (prop.value !== value && !this.propsToSyncArray.includes(name))
+      ) {
+        this.propsToSyncArray.push(name);
       }
+      // set value
+      prop.value = value;
+      return true;
     }
-    return false; // not found or not changed
+    return false; // not found
+  };
+
+  public setOtaMethod = (otaMethod: number) => {
+    this.otaMethod = otaMethod;
   };
 
   public setUpdatePropCallback = (
@@ -489,43 +487,7 @@ class Trackle extends EventEmitter {
     this.removeListener(eventName, subValue[0]);
   };
 
-  /**
-   * Sync props
-   * @param props: string[] - array of property names to send. if passed empty do not send anything
-   */
-  public syncProps = async (props?: string[]) => {
-    if (!this.isConnected) {
-      return;
-    }
-    try {
-      let propsArray = Array.from(this.propsMap, ([name, property]) => ({
-        name,
-        property
-      }));
-      if (props) {
-        propsArray = propsArray.filter(({ name }) => props.includes(name));
-      }
-      if (propsArray.length) {
-        const propsToSend = propsArray.reduce((acc, cur) => {
-          acc[cur.name] = cur.property.value;
-          // remove from changed array
-          if (this.propsChangedArray.includes(cur.name)) {
-            this.propsChangedArray = this.propsChangedArray.filter(
-              prop => prop !== cur.name
-            );
-          }
-          return acc;
-        }, {});
-        return await this.publish(
-          'trackle/p',
-          JSON.stringify(propsToSend),
-          'PRIVATE'
-        );
-      }
-    } catch (err) {
-      this.emit('error', new Error('props: ' + err.message));
-    }
-  };
+  public forceSyncProps = async () => await this.syncProps();
 
   public publish = async (
     eventName: string,
@@ -533,9 +495,9 @@ class Trackle extends EventEmitter {
     eventType?: EventType,
     eventFlags?: EventFlags,
     messageID?: string
-  ) => {
+  ): Promise<boolean> => {
     if (!this.isConnected) {
-      return;
+      return false;
     }
     const nextMessageID = this.nextMessageID();
     const confirmable = this.forceTcp
@@ -571,11 +533,14 @@ class Trackle extends EventEmitter {
             SEND_EVENT_ACK_TIMEOUT
           );
           this.emit('publishCompleted', { success: true, messageID });
+          return true;
         } catch (err) {
           this.emit('publishCompleted', { success: false, messageID });
+          return false;
         }
       }
     }
+    return false;
   };
 
   public enableUpdates = () => {
@@ -612,23 +577,17 @@ class Trackle extends EventEmitter {
     Array.from(this.variablesMap.keys()).forEach((key: string) => {
       variablesObject[key] = this.variablesMap.get(key)[0];
     });
+    const propertiesObject = {};
+    Array.from(this.propsMap.keys()).forEach((key: string) => {
+      propertiesObject[key] = +this.propsMap.get(key).writable;
+    });
 
     const description = JSON.stringify({
       f: functions,
       g: filesObject,
-      m: [
-        {},
-        {},
-        {
-          d: [],
-          f: 's',
-          n: '1',
-          v: VERSION
-        },
-        {},
-        {}
-      ],
-      p: this.platformID,
+      o: this.otaMethod,
+      p: propertiesObject,
+      s: VERSION,
       v: variablesObject
     });
 
@@ -738,9 +697,9 @@ class Trackle extends EventEmitter {
       this.pingInterval = null;
     }
 
-    if (this.syncPropsChangedInterval) {
-      clearInterval(this.syncPropsChangedInterval as any);
-      this.syncPropsChangedInterval = null;
+    if (this.syncPropsInterval) {
+      clearInterval(this.syncPropsInterval as any);
+      this.syncPropsInterval = null;
     }
   };
 
@@ -766,6 +725,50 @@ class Trackle extends EventEmitter {
       this.emit('reconnect');
       this.connect();
     }, 5000);
+  };
+
+  /**
+   * Sync props
+   * @param props: string[] - array of property names to send. if passed empty do not send anything
+   */
+  private syncProps = async (props?: string[]): Promise<boolean> => {
+    if (!this.isConnected) {
+      return false;
+    }
+    try {
+      let propsArray = Array.from(this.propsMap, ([name, property]) => ({
+        name,
+        property
+      }));
+      if (props) {
+        propsArray = propsArray.filter(({ name }) => props.includes(name));
+      }
+      if (propsArray.length) {
+        const propsToSend = propsArray.reduce((acc, cur) => {
+          acc[cur.name] = cur.property.value;
+          return acc;
+        }, {});
+        const published = await this.publish(
+          'trackle/p',
+          JSON.stringify(propsToSend),
+          'PRIVATE'
+        );
+        if (published) {
+          propsArray.forEach(prop => {
+            // remove from toSync array
+            if (this.propsToSyncArray.includes(prop.name)) {
+              this.propsToSyncArray = this.propsToSyncArray.filter(
+                propToSync => propToSync !== prop.name
+              );
+            }
+          });
+          return true;
+        }
+      }
+    } catch (err) {
+      this.emit('error', new Error('props: ' + err.message));
+    }
+    return false;
   };
 
   private onReadData = (data: Buffer): void => {
@@ -880,11 +883,13 @@ class Trackle extends EventEmitter {
       this.publish('trackle/device/claim/code', this.claimCode, 'PRIVATE');
     }
 
-    this.publish(
-      'trackle/hardware/ota_chunk_size',
-      CHUNK_SIZE.toString(),
-      'PRIVATE'
-    );
+    if (this.otaMethod === 1) {
+      this.publish(
+        'trackle/hardware/ota_chunk_size',
+        CHUNK_SIZE.toString(),
+        'PRIVATE'
+      );
+    }
 
     if (this.otaUpdateEnabled) {
       this.publish('trackle/device/updates/enabled', 'true', 'PRIVATE');
@@ -899,14 +904,11 @@ class Trackle extends EventEmitter {
     }
 
     // Sync props changes
-    this.syncPropsChangedInterval = setInterval(() => {
-      if (this.propsChangedArray.length) {
-        this.syncProps(this.propsChangedArray);
+    this.syncPropsInterval = setInterval(() => {
+      if (this.propsToSyncArray.length) {
+        this.syncProps(this.propsToSyncArray);
       }
     }, SYNC_PROPS_CHANGE_INTERVAL) as any;
-
-    // Sync props at connection
-    this.syncProps();
   };
 
   private handleSystemEvent = async (
@@ -1006,8 +1008,8 @@ class Trackle extends EventEmitter {
       case 'trackle/device/pin_code':
         this.emit('pinCode', data);
         break;
-      case 'trackle/device/props/update':
-        this.syncProps();
+      case 'trackle/device/state/update':
+        await this.syncProps();
         break;
     }
   };
