@@ -11,7 +11,7 @@ export interface ICloudOptions {
 }
 export interface IProperty {
     propName: string;
-    value: number;
+    value: any;
     writable: boolean;
 }
 export declare const updatePropertyErrors: {
@@ -66,10 +66,10 @@ declare class Trackle extends EventEmitter {
     file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => boolean;
     post: (name: string, callFunctionCallback: (args: string, caller?: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
     get: (name: string, type: string, retrieveValueCallback: (args?: string) => any | Promise<any>) => boolean;
-    prop: (name: string, value: number, writable?: boolean) => boolean;
-    syncProp: (name: string, value: number, force?: boolean) => boolean;
+    prop: (name: string, value: any, writable?: boolean) => boolean;
+    syncProp: (name: string, value: any, force?: boolean) => boolean;
     setOtaMethod: (otaMethod: number) => void;
-    setUpdatePropCallback: (updatePropCallback: (name: string, value: number, caller?: string) => number | Promise<number>) => boolean;
+    setUpdatePropCallback: (updatePropCallback: (name: string, value: any, caller?: string) => number | Promise<number>) => boolean;
     disconnect: () => void;
     subscribe: (eventName: string, callback: (event: string, data: string) => void, subscriptionType?: SubscriptionType, subscriptionDeviceID?: string) => boolean;
     unsubscribe: (eventName: string) => void;

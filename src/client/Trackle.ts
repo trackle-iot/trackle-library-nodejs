@@ -75,7 +75,7 @@ export interface ICloudOptions {
 
 export interface IProperty {
   propName: string;
-  value: number;
+  value: any;
   writable: boolean;
 }
 
@@ -156,7 +156,7 @@ class Trackle extends EventEmitter {
   private claimCode: string;
   private updatePropCallback: (
     name: string,
-    value: number,
+    value: any,
     caller?: string
   ) => number | Promise<number>;
 
@@ -393,7 +393,7 @@ class Trackle extends EventEmitter {
     return true;
   };
 
-  public prop = (name: string, value: number, writable?: boolean): boolean => {
+  public prop = (name: string, value: any, writable?: boolean): boolean => {
     if (name.length > EVENT_NAME_MAX_LENGTH) {
       return false;
     }
@@ -408,7 +408,7 @@ class Trackle extends EventEmitter {
     return true;
   };
 
-  public syncProp = (name: string, value: number, force?: boolean): boolean => {
+  public syncProp = (name: string, value: any, force?: boolean): boolean => {
     if (this.propsMap.has(name)) {
       const prop = this.propsMap.get(name);
       // if value is changed
@@ -432,7 +432,7 @@ class Trackle extends EventEmitter {
   public setUpdatePropCallback = (
     updatePropCallback: (
       name: string,
-      value: number,
+      value: any,
       caller?: string
     ) => number | Promise<number>
     // propsFlags?: PropertiesFlags
@@ -860,8 +860,6 @@ class Trackle extends EventEmitter {
       () => this.pingServer(),
       this.keepalive
     ) as any;
-    this.isConnected = true;
-    this.emit('connected');
 
     this.sendDescribe(DESCRIBE_ALL);
 
@@ -909,6 +907,9 @@ class Trackle extends EventEmitter {
         this.syncProps(this.propsToSyncArray);
       }
     }, SYNC_PROPS_CHANGE_INTERVAL) as any;
+
+    this.isConnected = true;
+    this.emit('connected');
   };
 
   private handleSystemEvent = async (
@@ -1158,7 +1159,7 @@ class Trackle extends EventEmitter {
         const args = packet.options
           .filter(o => o.name === 'Uri-Query')
           .map(o => o.value.toString('utf8'));
-        this.sendUpdatePropResult(propName, Number(args[0]), args[1], packet);
+        this.sendUpdatePropResult(propName, args[0], args[1], packet);
         break;
       }
 
@@ -1816,7 +1817,7 @@ class Trackle extends EventEmitter {
 
   private sendUpdatePropResult = async (
     propName: string,
-    value: number,
+    value: string,
     caller: string,
     serverPacket: CoapPacket.ParsedPacket
   ) => {
