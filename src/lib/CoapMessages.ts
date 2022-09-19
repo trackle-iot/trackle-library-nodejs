@@ -1,4 +1,42 @@
 export default class CoapMessages {
+  public static getTypeIntFromName = (name: string): number => {
+    switch (name) {
+      case 'bool': {
+        return 1;
+      }
+
+      case 'int':
+      case 'int32': {
+        return 2;
+      }
+
+      case 'string': {
+        return 4;
+      }
+
+      case 'null': {
+        return 5;
+      }
+
+      case 'long':
+      case 'int64': {
+        return 6;
+      }
+
+      case 'json': {
+        return 7;
+      }
+
+      case 'number':
+      case 'double': {
+        return 9;
+      }
+
+      default: {
+        return 4; // string as fallback
+      }
+    }
+  };
   public static toBinary = (
     value: string | number | Buffer | object,
     type?: string

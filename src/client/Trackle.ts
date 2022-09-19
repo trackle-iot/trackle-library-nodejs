@@ -575,7 +575,9 @@ class Trackle extends EventEmitter {
     const functions = Array.from(this.functionsMap.keys());
     const variablesObject = {};
     Array.from(this.variablesMap.keys()).forEach((key: string) => {
-      variablesObject[key] = this.variablesMap.get(key)[0];
+      variablesObject[key] = CoapMessages.getTypeIntFromName(
+        this.variablesMap.get(key)[0]
+      );
     });
     const propertiesObject = {};
     Array.from(this.propsMap.keys()).forEach((key: string) => {
