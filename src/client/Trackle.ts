@@ -75,6 +75,7 @@ export interface ICloudOptions {
 
 export interface IProperty {
   propName: string;
+  type: 'int' | 'double' | 'string';
   value: any;
   writable: boolean;
 }
@@ -393,7 +394,12 @@ class Trackle extends EventEmitter {
     return true;
   };
 
-  public prop = (name: string, value: any, writable?: boolean): boolean => {
+  public prop = (
+    name: string,
+    type: 'int' | 'double' | 'string',
+    value: any,
+    writable?: boolean
+  ): boolean => {
     if (name.length > EVENT_NAME_MAX_LENGTH) {
       return false;
     }
@@ -402,6 +408,7 @@ class Trackle extends EventEmitter {
     }
     this.propsMap.set(name, {
       propName: name,
+      type,
       value,
       writable: writable || false
     });
@@ -581,14 +588,16 @@ class Trackle extends EventEmitter {
     });
     const propertiesObject = {};
     Array.from(this.propsMap.keys()).forEach((key: string) => {
-      propertiesObject[key] = +this.propsMap.get(key).writable;
+      propertiesObject[key] =
+        +this.propsMap.get(key).writable * 128 +
+        CoapMessages.getTypeIntFromName(this.propsMap.get(key).type);
     });
 
     const description = JSON.stringify({
       f: functions,
       g: filesObject,
       o: this.otaMethod,
-      p: propertiesObject,
+      r: propertiesObject,
       s: VERSION,
       v: variablesObject
     });
@@ -856,6 +865,8 @@ class Trackle extends EventEmitter {
     }
 
     this.state = 'next';
+    this.isConnected = true;
+    this.emit('connected');
 
     // Ping every 15 or 30 seconds
     this.pingInterval = setInterval(
@@ -909,9 +920,6 @@ class Trackle extends EventEmitter {
         this.syncProps(this.propsToSyncArray);
       }
     }, SYNC_PROPS_CHANGE_INTERVAL) as any;
-
-    this.isConnected = true;
-    this.emit('connected');
   };
 
   private handleSystemEvent = async (

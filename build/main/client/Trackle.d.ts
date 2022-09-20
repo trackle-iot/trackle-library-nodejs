@@ -11,6 +11,7 @@ export interface ICloudOptions {
 }
 export interface IProperty {
     propName: string;
+    type: 'int' | 'double' | 'string';
     value: any;
     writable: boolean;
 }
@@ -66,7 +67,7 @@ declare class Trackle extends EventEmitter {
     file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => boolean;
     post: (name: string, callFunctionCallback: (args: string, caller?: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
     get: (name: string, type: string, retrieveValueCallback: (args?: string) => any | Promise<any>) => boolean;
-    prop: (name: string, value: any, writable?: boolean) => boolean;
+    prop: (name: string, type: 'int' | 'double' | 'string', value: any, writable?: boolean) => boolean;
     syncProp: (name: string, value: any, force?: boolean) => boolean;
     setOtaMethod: (otaMethod: number) => void;
     setUpdatePropCallback: (updatePropCallback: (name: string, value: any, caller?: string) => number | Promise<number>) => boolean;
