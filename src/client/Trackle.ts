@@ -21,7 +21,6 @@ const COUNTER_MAX = 65536;
 const EVENT_NAME_MAX_LENGTH = 64;
 const FILES_MAX_NUMBER = 4;
 const FUNCTIONS_MAX_NUMBER = 20;
-const PROPS_MAX_NUMBER = 50;
 const VARIABLES_MAX_NUMBER = 20;
 const SUBSCRIPTIONS_MAX_NUMBER = 4;
 
@@ -36,7 +35,6 @@ const DESCRIBE_ALL = DESCRIBE_APPLICATION | DESCRIBE_SYSTEM;
 const CHUNK_SIZE = 512;
 
 const SEND_EVENT_ACK_TIMEOUT = 5000;
-const SYNC_PROPS_CHANGE_INTERVAL = 1000;
 
 type DeviceState = 'next' | 'nonce' | 'set-session-key';
 type EventType = 'PRIVATE' | 'PUBLIC';
@@ -71,13 +69,6 @@ export interface ICloudOptions {
   address?: string;
   publicKeyPEM?: string;
   port?: number;
-}
-
-export interface IProperty {
-  propName: string;
-  type: 'int' | 'double' | 'string';
-  value: any;
-  writable: boolean;
 }
 
 export const updatePropertyErrors = {
@@ -130,7 +121,6 @@ class Trackle extends EventEmitter {
   private productID: number;
   private port: number;
   private privateKey: NodeRSA | ECKey;
-  private syncPropsInterval: number;
   private serverKey: NodeRSA | ECKey;
   private socket: Socket | dtls.Socket;
   private state: DeviceState;
@@ -142,8 +132,6 @@ class Trackle extends EventEmitter {
     string,
     [string, (args: string, caller?: string) => number | Promise<number>]
   >;
-  private propsMap: Map<string, IProperty>;
-  private propsToSyncArray: string[];
   private subscriptionsMap: Map<
     string,
     [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType, string]
@@ -155,9 +143,9 @@ class Trackle extends EventEmitter {
   private sentPacketCounterMap: Map<number, number>;
   private keepalive: number = 30000;
   private claimCode: string;
-  private updatePropCallback: (
+  private updateStateCallback: (
     name: string,
-    value: any,
+    value: string,
     caller?: string
   ) => number | Promise<number>;
 
@@ -172,8 +160,6 @@ class Trackle extends EventEmitter {
       string,
       [string, (args: string) => number | Promise<number>]
     >();
-    this.propsMap = new Map<string, IProperty>();
-    this.propsToSyncArray = [];
     this.subscriptionsMap = new Map<
       string,
       [(packet: CoapPacket.ParsedPacket) => void, SubscriptionType, string]
@@ -394,57 +380,19 @@ class Trackle extends EventEmitter {
     return true;
   };
 
-  public prop = (
-    name: string,
-    type: 'int' | 'double' | 'string',
-    value: any,
-    writable?: boolean
-  ): boolean => {
-    if (name.length > EVENT_NAME_MAX_LENGTH) {
-      return false;
-    }
-    if (this.propsMap.size >= PROPS_MAX_NUMBER) {
-      return false;
-    }
-    this.propsMap.set(name, {
-      propName: name,
-      type,
-      value,
-      writable: writable || false
-    });
-    return true;
-  };
-
-  public syncProp = (name: string, value: any, force?: boolean): boolean => {
-    if (this.propsMap.has(name)) {
-      const prop = this.propsMap.get(name);
-      // if value is changed
-      if (
-        force ||
-        (prop.value !== value && !this.propsToSyncArray.includes(name))
-      ) {
-        this.propsToSyncArray.push(name);
-      }
-      // set value
-      prop.value = value;
-      return true;
-    }
-    return false; // not found
-  };
-
   public setOtaMethod = (otaMethod: number) => {
     this.otaMethod = otaMethod;
   };
 
-  public setUpdatePropCallback = (
-    updatePropCallback: (
+  public setUpdateStateCallback = (
+    updateStateCallback: (
       name: string,
-      value: any,
+      value: string,
       caller?: string
     ) => number | Promise<number>
     // propsFlags?: PropertiesFlags
   ): boolean => {
-    this.updatePropCallback = updatePropCallback;
+    this.updateStateCallback = updateStateCallback;
     return true;
   };
 
@@ -493,8 +441,6 @@ class Trackle extends EventEmitter {
     const subValue = this.subscriptionsMap.get(eventName);
     this.removeListener(eventName, subValue[0]);
   };
-
-  public forceSyncProps = async () => await this.syncProps();
 
   public publish = async (
     eventName: string,
@@ -572,6 +518,18 @@ class Trackle extends EventEmitter {
 
   public updatesPending = (): boolean => this.otaUpdatePending;
 
+  public syncState = async (state: object): Promise<boolean> => {
+    if (!this.isConnected) {
+      return false;
+    }
+    try {
+      await this.publish('trackle/p', JSON.stringify(state), 'PRIVATE');
+    } catch (err) {
+      this.emit('error', new Error('syncState: ' + err.message));
+    }
+    return false;
+  };
+
   private getDiagnostic = (): Buffer => Buffer.concat([Buffer.alloc(1, 0)]);
 
   private getDescription = (): Buffer => {
@@ -586,18 +544,11 @@ class Trackle extends EventEmitter {
         this.variablesMap.get(key)[0]
       );
     });
-    const propertiesObject = {};
-    Array.from(this.propsMap.keys()).forEach((key: string) => {
-      propertiesObject[key] =
-        +this.propsMap.get(key).writable * 128 +
-        CoapMessages.getTypeIntFromName(this.propsMap.get(key).type);
-    });
 
     const description = JSON.stringify({
       f: functions,
       g: filesObject,
       o: this.otaMethod,
-      r: propertiesObject,
       s: VERSION,
       v: variablesObject
     });
@@ -707,11 +658,6 @@ class Trackle extends EventEmitter {
       clearInterval(this.pingInterval as any);
       this.pingInterval = null;
     }
-
-    if (this.syncPropsInterval) {
-      clearInterval(this.syncPropsInterval as any);
-      this.syncPropsInterval = null;
-    }
   };
 
   private reconnect = (error: NodeJS.ErrnoException): void => {
@@ -736,50 +682,6 @@ class Trackle extends EventEmitter {
       this.emit('reconnect');
       this.connect();
     }, 5000);
-  };
-
-  /**
-   * Sync props
-   * @param props: string[] - array of property names to send. if passed empty do not send anything
-   */
-  private syncProps = async (props?: string[]): Promise<boolean> => {
-    if (!this.isConnected) {
-      return false;
-    }
-    try {
-      let propsArray = Array.from(this.propsMap, ([name, property]) => ({
-        name,
-        property
-      }));
-      if (props) {
-        propsArray = propsArray.filter(({ name }) => props.includes(name));
-      }
-      if (propsArray.length) {
-        const propsToSend = propsArray.reduce((acc, cur) => {
-          acc[cur.name] = cur.property.value;
-          return acc;
-        }, {});
-        const published = await this.publish(
-          'trackle/p',
-          JSON.stringify(propsToSend),
-          'PRIVATE'
-        );
-        if (published) {
-          propsArray.forEach(prop => {
-            // remove from toSync array
-            if (this.propsToSyncArray.includes(prop.name)) {
-              this.propsToSyncArray = this.propsToSyncArray.filter(
-                propToSync => propToSync !== prop.name
-              );
-            }
-          });
-          return true;
-        }
-      }
-    } catch (err) {
-      this.emit('error', new Error('props: ' + err.message));
-    }
-    return false;
   };
 
   private onReadData = (data: Buffer): void => {
@@ -913,13 +815,6 @@ class Trackle extends EventEmitter {
     } else {
       this.publish('trackle/device/updates/forced', 'false', 'PRIVATE');
     }
-
-    // Sync props changes
-    this.syncPropsInterval = setInterval(() => {
-      if (this.propsToSyncArray.length) {
-        this.syncProps(this.propsToSyncArray);
-      }
-    }, SYNC_PROPS_CHANGE_INTERVAL) as any;
   };
 
   private handleSystemEvent = async (
@@ -1018,9 +913,6 @@ class Trackle extends EventEmitter {
         break;
       case 'trackle/device/pin_code':
         this.emit('pinCode', data);
-        break;
-      case 'trackle/device/state/update':
-        await this.syncProps();
         break;
     }
   };
@@ -1168,8 +1060,13 @@ class Trackle extends EventEmitter {
         const propName = uris.join('/');
         const args = packet.options
           .filter(o => o.name === 'Uri-Query')
-          .map(o => o.value.toString('utf8'));
-        this.sendUpdatePropResult(propName, args[0], args[1], packet);
+          .map(o => o.value);
+        this.sendUpdateStateResult(
+          propName,
+          args[0].toString(), // value
+          args[1].toString(), // caller
+          packet
+        );
         break;
       }
 
@@ -1825,7 +1722,7 @@ class Trackle extends EventEmitter {
     }
   };
 
-  private sendUpdatePropResult = async (
+  private sendUpdateStateResult = async (
     propName: string,
     value: string,
     caller: string,
@@ -1835,53 +1732,31 @@ class Trackle extends EventEmitter {
       return;
     }
 
-    if (this.propsMap.has(propName)) {
-      const prop = this.propsMap.get(propName);
-      if (prop.writable) {
-        if (this.updatePropCallback) {
-          let returnValue: number;
-          try {
-            returnValue = await this.updatePropCallback(
-              propName,
-              value,
-              caller
-            );
-            if (returnValue > 0) {
-              prop.value = value;
-            }
-            const packet = {
-              code: '2.04',
-              messageId: this.nextMessageID(),
-              payload: CoapMessages.toBinary(returnValue, 'int32'),
-              token: serverPacket.token
-            };
-            this.writeCoapData(packet);
-          } catch (err) {
-            if (returnValue) {
-              this.messageID -= 1;
-            }
-            this.writeError(serverPacket, err.message, err.status || '5.00');
-            this.emit('error', new Error(err.message));
-          }
-        } else {
-          this.writeError(
-            serverPacket,
-            'setUpdatePropCallback not defined',
-            '5.00'
-          );
-          this.emit('error', new Error('setUpdatePropCallback not defined'));
+    if (this.updateStateCallback) {
+      let returnValue: number;
+      try {
+        returnValue = await this.updateStateCallback(propName, value, caller);
+        const packet = {
+          code: '2.04',
+          messageId: this.nextMessageID(),
+          payload: CoapMessages.toBinary(returnValue, 'int32'),
+          token: serverPacket.token
+        };
+        this.writeCoapData(packet);
+      } catch (err) {
+        if (returnValue) {
+          this.messageID -= 1;
         }
-      } else {
-        this.writeError(
-          serverPacket,
-          `Property ${propName} not writable`,
-          '4.00'
-        );
-        this.emit('error', new Error(`Property ${propName} not writable`));
+        this.writeError(serverPacket, err.message, err.status || '5.00');
+        this.emit('error', new Error(err.message));
       }
     } else {
-      this.writeError(serverPacket, `Property ${propName} not found`, '4.04');
-      this.emit('error', new Error(`Property ${propName} not found`));
+      this.writeError(
+        serverPacket,
+        'setUpdateStateCallback not defined',
+        '5.00'
+      );
+      this.emit('error', new Error('setUpdateStateCallback not defined'));
     }
   };
 

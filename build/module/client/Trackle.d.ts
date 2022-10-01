@@ -9,12 +9,6 @@ export interface ICloudOptions {
     publicKeyPEM?: string;
     port?: number;
 }
-export interface IProperty {
-    propName: string;
-    type: 'int' | 'double' | 'string';
-    value: any;
-    writable: boolean;
-}
 export declare const updatePropertyErrors: {
     BAD_REQUEST: number;
     NOT_FOUND: number;
@@ -44,20 +38,17 @@ declare class Trackle extends EventEmitter {
     private productID;
     private port;
     private privateKey;
-    private syncPropsInterval;
     private serverKey;
     private socket;
     private state;
     private filesMap;
     private functionsMap;
-    private propsMap;
-    private propsToSyncArray;
     private subscriptionsMap;
     private variablesMap;
     private sentPacketCounterMap;
     private keepalive;
     private claimCode;
-    private updatePropCallback;
+    private updateStateCallback;
     constructor(cloudOptions?: ICloudOptions);
     forceTcpProtocol: () => void;
     begin: (deviceID: string, privateKey: string | Buffer, productID?: number, productFirmwareVersion?: number, platformID?: number) => Promise<void>;
@@ -67,19 +58,17 @@ declare class Trackle extends EventEmitter {
     file: (fileName: string, mimeType: string, retrieveFileCallback: (fileName: string) => Promise<Buffer>) => boolean;
     post: (name: string, callFunctionCallback: (args: string, caller?: string) => number | Promise<number>, functionFlags?: FunctionFlags) => boolean;
     get: (name: string, type: string, retrieveValueCallback: (args?: string) => any | Promise<any>) => boolean;
-    prop: (name: string, type: 'int' | 'double' | 'string', value: any, writable?: boolean) => boolean;
-    syncProp: (name: string, value: any, force?: boolean) => boolean;
     setOtaMethod: (otaMethod: number) => void;
-    setUpdatePropCallback: (updatePropCallback: (name: string, value: any, caller?: string) => number | Promise<number>) => boolean;
+    setUpdateStateCallback: (updateStateCallback: (name: string, value: string, caller?: string) => number | Promise<number>) => boolean;
     disconnect: () => void;
     subscribe: (eventName: string, callback: (event: string, data: string) => void, subscriptionType?: SubscriptionType, subscriptionDeviceID?: string) => boolean;
     unsubscribe: (eventName: string) => void;
-    forceSyncProps: () => Promise<boolean>;
     publish: (eventName: string, data?: string, eventType?: EventType, eventFlags?: EventFlags, messageID?: string) => Promise<boolean>;
     enableUpdates: () => void;
     disableUpdates: () => void;
     updatesEnabled: () => boolean;
     updatesPending: () => boolean;
+    syncState: (state: object) => Promise<boolean>;
     private getDiagnostic;
     private getDescription;
     private resolvePromise;
@@ -87,11 +76,6 @@ declare class Trackle extends EventEmitter {
     private sendSubscribe;
     private disconnectInternal;
     private reconnect;
-    /**
-     * Sync props
-     * @param props: string[] - array of property names to send. if passed empty do not send anything
-     */
-    private syncProps;
     private onReadData;
     private finalizeHandshake;
     private handleSystemEvent;
@@ -110,7 +94,7 @@ declare class Trackle extends EventEmitter {
     private writeError;
     private sendFunctionResult;
     private sendVariable;
-    private sendUpdatePropResult;
+    private sendUpdateStateResult;
     private writeCoapData;
     private writeData;
     private sendEvent;
