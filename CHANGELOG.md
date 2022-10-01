@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.7.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.5.0...v1.7.0) (2022-10-01)
+
+
+### Features
+
+* add ota method and props in describe ([756202b](https://github.com/trackle-iot/trackle-library-nodejs/commit/756202b3a283b68e8d8c480903a00a865490d354))
+* add props in library ([6de1f6e](https://github.com/trackle-iot/trackle-library-nodejs/commit/6de1f6e1c1aee956e390f65be12aaa907cb1392d))
+
+
+### Bug Fixes
+
+* handle number and string properties ([6ac9efc](https://github.com/trackle-iot/trackle-library-nodejs/commit/6ac9efc81a76923daa08d0e046b3eda0226d84a8))
+* restore properties as before 1.6.0 ([467cea7](https://github.com/trackle-iot/trackle-library-nodejs/commit/467cea7e8327a10ff01933ebe18bfcee977403f7))
+* send typed int variables type ([61b424f](https://github.com/trackle-iot/trackle-library-nodejs/commit/61b424ffe53e00eeb3ca95ca2e8212abe283ddb2))
+
 ## [1.6.0](https://github.com/trackle-iot/trackle-library-nodejs/compare/v1.5.0...v1.6.0) (2022-09-11)
 
 
